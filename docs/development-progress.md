@@ -131,16 +131,22 @@ Phase 4 已完成以下内部应用路径：
 4. Compose bucket 初始化、MinIO endpoint 隔离、standalone 镜像和重启后持久化读取。
 5. PostgreSQL + 对象 bucket 一致备份、隔离恢复与回滚文档及本地演练。
 
-尚未完成：
+官方生产已完成：
 
 - Vercel Hobby 项目已从个人私有 fork 创建并成功部署，`auth.hsfz.live` 已绑定；health、Neon readiness、`hkg1`、OIDC discovery/issuer 与 Ed25519 JWKS 已通过正式域名只读验收。
-- Neon 的 6 个 migration 已成功应用；私有 R2 bucket、bucket 级对象读写凭据、Resend 已验证邮件域名及发送专用 API key 已配置，仍须验证真实邮件接收和 R2 对象读写。
-- Cloudflare 外部调度器尚未部署。
-- 初始管理员已成功 bootstrap，但历史脚本允许无效邮箱值，首次风险登录向 Resend 发送 OTP 时被 `422 invalid to` 拒绝。邮箱输入校验与受限修复命令合并前不得再次登录或直接修改生产数据。
+- Neon 的 6 个 migration 已成功应用；pooled/direct URL 均显式使用 `sslmode=verify-full`，正式 redeploy 后 readiness 保持数据库 connected。
+- 初始管理员已成功 bootstrap；历史无效邮箱已由受限命令修复，旧 challenge 已取消，Resend 新设备 OTP、会话、`ADMIN` 权限和管理控制台均通过真实登录验收。
+- 私有 R2 bucket 已通过真实头像上传、应用读取和刷新后持久化验收。
+- Cloudflare `hflive-auth-outbox-scheduler` 已部署 `* * * * *` Cron；secret 轮换后版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 的真实 scheduled invocation 为 `outcome: ok`。
+
+仍待完成：
+
+- 以正式接入 client 运行完整 authorization code + PKCE OIDC smoke，并验证 OIDC/Directory `picture`。
+- 创建真实成员邀请以验收邀请邮件与接受流程，并用订阅 client 验证 `user.profile.changed` webhook 的投递状态。
 
 ## 已知限制与注意事项
 
-- 官方环境尚未验收，不能将本地构建或 MinIO 结果表述为 Vercel/R2 生产通过。
+- 官方核心基础设施、管理员登录、风险 OTP 与 R2 头像链路已验收；正式 client 的 OIDC/Directory/webhook 和成员邀请链路仍不能表述为生产通过。
 - Vercel Hobby 不支持每分钟原生 Cron；官方 Hobby 部署必须使用仓库内 Cloudflare Worker Cron，且 Vercel 与 Worker 注入相同的独立 `OUTBOX_WORKER_SECRET`。
 - 自部署关闭邮件时邀请/恢复不可用，风险登录明确降级为密码登录并记录审计；官方生产禁止关闭邮件。
 - 普通登录用户的 OAuth client 管理权限仍默认全部拒绝；所有 client 变更必须走平台管理员控制面。

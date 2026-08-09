@@ -1,6 +1,6 @@
 # Phase 5 头像与部署参考
 
-状态：实现完成，自部署已验收，官方环境待凭据验收  
+状态：实现完成，自部署与官方核心基础设施已验收，正式 client 接入验收待完成
 最后更新：2026-08-09
 
 ## 头像契约
@@ -45,6 +45,15 @@ Vercel 使用框架集成生成函数产物，`DEPLOYMENT_MODE=official` 或平�
 `vercel.json` 不登记 Cron，以免 Hobby 部署因每分钟计划被拒绝。Cloudflare Worker 配置位于 `infrastructure/cloudflare-outbox-scheduler/wrangler.jsonc`，生产域名固定为 `https://auth.hsfz.live`。部署 Worker 前先在 Vercel 设置至少 32 字符的 `OUTBOX_WORKER_SECRET`，再把完全相同的值通过 Cloudflare secret 管理注入 Worker；不得把值写入 Wrangler 配置、命令参数、日志或仓库。
 
 Worker 只向 `/api/internal/outbox/dispatch` 发送带 Bearer 鉴权的 HTTPS `POST`。非 2xx 响应只记录状态码并让本次 Cron 失败，不读取响应正文，也不会输出 secret。Cron Trigger 变更可能需要数分钟传播；验收时应检查 Cloudflare invocation 成功以及应用 outbox 状态，而不能只确认 Worker 已部署。
+
+### 2026-08-09 官方生产验收快照
+
+- Vercel Hobby 从个人私有 fork 部署，固定域名为 `https://auth.hsfz.live`，函数区域为 `hkg1`；readiness 返回数据库 connected。
+- Neon Singapore 的 6 个 migration 已应用，pooled/direct URL 显式使用 `sslmode=verify-full`；生产连接串和凭据未写入仓库。
+- Resend 真实新设备 OTP 已投递并完成管理员登录；初始管理员、会话和 `/admin` 权限通过验收。
+- 私有 R2 通过真实头像上传、同源读取和刷新后持久化验收。
+- Cloudflare Worker 使用加密 `OUTBOX_WORKER_SECRET` 和 `* * * * *` trigger；版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 的真实 scheduled invocation 为 `outcome: ok`、无异常。
+- 剩余验收边界为正式 client 的 OIDC smoke、OIDC/Directory `picture`、成员邀请流程和 `user.profile.changed` webhook。
 
 ## 自部署检查
 

@@ -395,6 +395,35 @@
 
 - 修复合并后在生产 direct 连接上执行一次受限邮箱修复，重新登录并验证 Resend OTP、会话与管理页面。
 
+## 2026-08-09 — Phase 5 官方核心基础设施验收
+
+### 目标
+
+- 完成 Vercel、Neon、Resend、R2 与 Cloudflare 外部调度器的真实生产闭环，并明确仍待正式 client 验证的边界。
+
+### 实现
+
+- 将 Neon pooled/direct 连接串显式切换为 `sslmode=verify-full` 并重新部署，保留既有 channel binding 参数。
+- 使用受限命令修复唯一 bootstrap 管理员的历史无效邮箱，取消遗留 challenge；通过 Resend OTP 完成首次新设备登录。
+- 部署 `hflive-auth-outbox-scheduler`，以 Cloudflare secret binding 注入与 Vercel 相同的独立 worker secret，并启用每分钟 Cron。
+
+### 关键决定或问题
+
+- 首次 Cloudflare 注入时发现随机值被误用为 binding 名称；在启用正式调度后立即撤下 Cron、删除错误 binding，并同时轮换 Vercel 与 Cloudflare 两端密钥。旧值不再有效，仓库和文档未记录任何 secret 值。
+- Worker 首次创建使用无 Cron 临时配置；仅在确认 binding 名称为 `OUTBOX_WORKER_SECRET` 后才部署仓库正式 trigger，临时文件随后删除且未进入 Git。
+
+### 验证
+
+- 多次正式 redeploy 后 `https://auth.hsfz.live/api/health/ready` 均返回 200、数据库 connected，`x-vercel-id` 显示 `hkg1`。
+- 管理员密码验证、Resend 6 位 OTP、会话、根路径回跳、`/admin` 权限均通过真实浏览器验收。
+- R2 真实头像上传、应用读取和刷新后持久化通过。
+- Cloudflare 正式版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 已绑定 `* * * * *`；实时 tail 捕获 scheduled event `outcome: ok`，无 exception 或错误日志。
+
+### 遗留事项
+
+- 创建正式接入 client，运行 authorization code + PKCE OIDC smoke，验证 OIDC/Directory `picture` 与 `user.profile.changed` webhook。
+- 使用真实成员邮箱验收邀请邮件与接受流程；不在生产创建 disposable 测试账号。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：
