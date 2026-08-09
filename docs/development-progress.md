@@ -138,13 +138,13 @@ Phase 4 已完成以下内部应用路径：
 - 初始管理员已成功 bootstrap；历史无效邮箱已由受限命令修复，旧 challenge 已取消，Resend 新设备 OTP、会话、`ADMIN` 权限和管理控制台均通过真实登录验收。
 - 私有 R2 bucket 已通过真实头像上传、应用读取和刷新后持久化验收。
 - Cloudflare `hflive-auth-outbox-scheduler` 已部署 `* * * * *` Cron；secret 轮换后版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 的真实 scheduled invocation 为 `outcome: ok`。
-- EdgeOne 可选静态资源分发已实现：仅在 Vercel Production 上传 `/_next/static/*`，上传后校验公开文件的 MIME 与精确字节；默认仍使用 Vercel，生产启用和真实网络测速待完成。
+- EdgeOne 可选静态资源分发已在生产启用：Vercel Production 仅上传 `/_next/static/*` 到 `static-auth.hsfz.live`；生产登录页已引用该 origin，CSS/JS/WOFF2 的 HTTP/2、MIME、immutable cache、CORS/CORP 与 EdgeOne cache hit 均通过外部验收。
 
 仍待完成：
 
 - 以正式接入 client 运行完整 authorization code + PKCE OIDC smoke，并验证 OIDC/Directory `picture`。
 - 创建真实成员邀请以验收邀请邮件与接受流程，并用订阅 client 验证 `user.profile.changed` webhook 的投递状态。
-- 创建 EdgeOne Makers `overseas` 项目并绑定静态域名，注入 Production-only token 后完成真实部署；分别记录中国大陆与境外网络结果，不因使用 EdgeOne 自动宣称大陆加速。
+- 分别记录中国大陆与境外真实用户网络的加载时间和失败率；EdgeOne 技术链路通过不等于已经证明大陆访问提速。
 
 ## 已知限制与注意事项
 

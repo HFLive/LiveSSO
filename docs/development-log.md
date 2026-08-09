@@ -455,6 +455,35 @@
 - 创建真实 EdgeOne Makers `overseas` 项目、绑定静态域名并在 Vercel Production 注入 token 后完成首次真实上传和公开回读。
 - 分别进行中国大陆与境外网络测量，再决定是否长期启用；若结果不佳则切回 `STATIC_ASSET_PROVIDER=vercel`。
 
+## 2026-08-09 — EdgeOne 生产静态资源验收
+
+### 目标
+
+- 在不改变认证、API 和私有对象路径的前提下，启用并验证 EdgeOne Makers 生产静态资源 origin。
+
+### 实现
+
+- 创建国际版 Makers Direct Upload 项目 `hflive-auth-static-eo`，区域使用排除中国大陆的全球可用区。
+- 将 Production 自定义域名绑定为 `static-auth.hsfz.live`，启用 Force HTTPS 与 HTTP/2。
+- 在 Vercel Production 注入 provider、origin、项目名和敏感 API Token，重新部署后由 postbuild 自动上传本次 `.next/static`。
+
+### 关键决定或问题
+
+- API Token 为 Makers 账户级凭据，设置有效期并仅保存在 Vercel Production；未注入 Preview、Development 或仓库。
+- 未备案边界不变：该项目不使用中国大陆节点，技术链路通过不能表述为已证明大陆访问提速。
+
+### 验证
+
+- `static-auth.hsfz.live` CNAME 指向 EdgeOne Pages，HTTP 返回 302 至 HTTPS，HTTPS 使用 HTTP/2 并返回 200。
+- `https://auth.hsfz.live/sign-in` 的生产 HTML 已引用该静态 origin；readiness 保持 HTTP 200、数据库 connected，Vercel 路由仍为 `hkg1`。
+- 抽查 CSS、JavaScript 和 WOFF2 均返回 HTTP/2 200，MIME 分别为 `text/css`、`application/javascript`、`font/woff2`，并包含一年 immutable cache、`Access-Control-Allow-Origin: *` 与 `Cross-Origin-Resource-Policy: cross-origin`。
+- JavaScript 首次外部抽查为 EdgeOne cache miss，随后重复请求为 cache hit，ETag 与内容长度保持一致。
+
+### 遗留事项
+
+- 从中国大陆与境外真实用户网络采集页面加载时间和失败率，与 Vercel 基线对比后判断实际收益。
+- 在 API Token 到期前完成轮换，并通过一次 Production redeploy 验证新 token。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

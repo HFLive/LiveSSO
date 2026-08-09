@@ -74,6 +74,7 @@ Worker 只向 `/api/internal/outbox/dispatch` 发送带 Bearer 鉴权的 HTTPS `
 - Resend 真实新设备 OTP 已投递并完成管理员登录；初始管理员、会话和 `/admin` 权限通过验收。
 - 私有 R2 通过真实头像上传、同源读取和刷新后持久化验收。
 - Cloudflare Worker 使用加密 `OUTBOX_WORKER_SECRET` 和 `* * * * *` trigger；版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 的真实 scheduled invocation 为 `outcome: ok`、无异常。
+- EdgeOne Makers `hflive-auth-static-eo` 使用排除中国大陆的全球可用区，`static-auth.hsfz.live` 已启用 Force HTTPS 与 HTTP/2；Vercel Production 已完成真实静态上传、公开回读和登录页引用验收。
 - 剩余验收边界为正式 client 的 OIDC smoke、OIDC/Directory `picture`、成员邀请流程和 `user.profile.changed` webhook。
 
 ## 自部署检查
