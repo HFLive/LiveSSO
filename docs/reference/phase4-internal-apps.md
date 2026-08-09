@@ -20,7 +20,7 @@
 | `directory:user:status` | `GET /api/directory/users/{sub}/status` | `subject`、全局账号状态、更新时间 |
 | `directory:user:read` | `GET /api/directory/users/{sub}` | 用户名、显示名、头像、邮箱验证和全局状态 |
 
-接口拒绝 authorization-code 用户 token，即使对应 client 同时拥有 Directory scope；调用必须来自 `client_credentials`。opaque token 通过数据库摘要、到期、client 状态和 scope 联合校验，JWT 路径验证 EdDSA 签名、issuer、audience、期限、client 与 scope。响应不缓存。
+接口拒绝 authorization-code 用户 token，即使对应 client 同时拥有 Directory scope；调用必须来自 `client_credentials`。opaque token 通过数据库摘要、到期、client 状态和 scope 联合校验，JWT 路径验证 EdDSA 签名、issuer、audience、期限、client 与 scope。成功、认证失败和未找到响应均显式使用 `private, no-store`。
 
 ## 可靠事件
 

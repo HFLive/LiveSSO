@@ -484,6 +484,33 @@
 - 从中国大陆与境外真实用户网络采集页面加载时间和失败率，与 Vercel 基线对比后判断实际收益。
 - 在 API Token 到期前完成轮换，并通过一次 Production redeploy 验证新 token。
 
+## 2026-08-09 — JWKS 与敏感 API 缓存硬化
+
+### 目标
+
+- 减少 JWKS 的重复动态请求，同时确保认证、Directory 和头像错误响应不会进入共享缓存，并修复非法头像用户 ID 导致的 500。
+
+### 实现
+
+- Better Auth JWKS 仅对成功响应设置 5 分钟公开缓存与 5 分钟 stale-while-revalidate；失败响应和其他认证端点保留原有缓存策略。
+- Directory 完整资料与状态接口的 401/404 分支显式使用 `private, no-store`，成功响应策略不变。
+- 头像读取在 PostgreSQL 查询前校验 UUID；参数错误、未找到、对象缺失和存储故障均为 `private, no-store`，成功的版本化头像继续使用一年 immutable cache。
+
+### 关键决定或问题
+
+- JWKS 轮换周期与旧 key 宽限均为 30 天；5 分钟缓存可减少请求且保持较短传播窗口，不复用 discovery 的一小时 stale 窗口。
+- 不对版本化成功头像降级缓存，因为 URL 版本变化、ETag 和旧对象保留共同保证内容不可变。
+
+### 验证
+
+- 新增 8 项路由单元测试，覆盖 JWKS 成功/失败/非 JWKS、Directory 401/404、头像非法 UUID/错误响应和成功 immutable 响应。
+- `pnpm validate` 通过：Lint、类型检查及 30 个常规测试成功，15 个需外部服务的测试按条件跳过。
+- Vercel managed-output 与 self-hosted standalone 两类生产构建均通过，20 个页面/路由完成生成，产物模式断言通过；postbuild 在非 Vercel Production 环境按设计跳过外部上传。
+
+### 遗留事项
+
+- 合并并完成 Vercel Production 部署后，从公开端点复验 JWKS、Directory 401、头像 400/404 和 session 响应头。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

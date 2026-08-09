@@ -11,6 +11,7 @@
 - 对象键使用 `avatars/{sub}/{uuid}.webp`，bucket 保持私有。应用通过 `GET /api/profile/avatar/{sub}?v={version}` 流式读取，不把对象存储凭据或临时签名 URL 暴露给浏览器。
 - `User.image` 与 OIDC `picture` 使用同源、版本化 URL。成功替换后旧 `ACTIVE` 资产转为 `REPLACED`，新资产转为 `ACTIVE`。
 - 版本化响应使用一年 immutable cache；旧版本至少保留 30 天，以覆盖已签发 token 和接入应用缓存。后续清理任务只能删除已超过保留期的 `REPLACED/DELETED` 对象。
+- 头像读取要求合法 UUID 与正整数版本；参数错误、未找到和存储故障均显式使用 `private, no-store`，只有成功的版本化对象可以公开 immutable 缓存。
 - 更新事务写入 `user.profile.changed` 审计，并为每个启用且订阅该事件的已批准 client 建立独立 outbox。
 
 ## 对象存储环境

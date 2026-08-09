@@ -139,6 +139,7 @@ Phase 4 已完成以下内部应用路径：
 - 私有 R2 bucket 已通过真实头像上传、应用读取和刷新后持久化验收。
 - Cloudflare `hflive-auth-outbox-scheduler` 已部署 `* * * * *` Cron；secret 轮换后版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 的真实 scheduled invocation 为 `outcome: ok`。
 - EdgeOne 可选静态资源分发已在生产启用：Vercel Production 仅上传 `/_next/static/*` 到 `static-auth.hsfz.live`；生产登录页已引用该 origin，CSS/JS/WOFF2 的 HTTP/2、MIME、immutable cache、CORS/CORP 与 EdgeOne cache hit 均通过外部验收。
+- API 缓存策略已硬化：JWKS 成功响应短期公开缓存，session/Directory/头像错误保持 `private, no-store`；头像非法 UUID 在查询数据库前返回 400。
 
 仍待完成：
 

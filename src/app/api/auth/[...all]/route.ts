@@ -5,6 +5,17 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 
 const handlers = toNextJsHandler(auth);
+const JWKS_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=300";
+
+function withCacheControl(response: Response, value: string) {
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -26,7 +37,11 @@ export async function GET(request: Request) {
       return Response.json({ error: "invalid_scope" }, { status: 400 });
     }
   }
-  return handlers.GET(request);
+  const response = await handlers.GET(request);
+  if (url.pathname.endsWith("/jwks") && response.ok) {
+    return withCacheControl(response, JWKS_CACHE_CONTROL);
+  }
+  return response;
 }
 
 export const POST = handlers.POST;

@@ -37,7 +37,7 @@ HFLive Auth 是 HFLive 组织内项目的统一身份平台。它提供统一账
 - 稳定 claims：`sub`、`email`、`email_verified`、`preferred_username`、`name`、`picture`。
 - issuer 是站点根域，不包含 Better Auth 的 `/api/auth` base path。
 - authorization code 有效期 5 分钟；access/id token 15 分钟；refresh token 30 天。
-- 使用 EdDSA JWKS；当前轮换周期和旧 key 宽限均为 30 天。
+- 使用 EdDSA JWKS；当前轮换周期和旧 key 宽限均为 30 天。成功 JWKS 响应允许公开缓存 5 分钟并短暂 stale-while-revalidate 5 分钟，失败响应不缓存。
 - client secret、opaque access token 和 refresh token 使用摘要存储。
 
 OIDC token 不携带 LiveBoard 管理员或业务角色。接入应用必须依据本地授权数据做最终权限判断。
