@@ -56,7 +56,7 @@
 - `pnpm oidc:smoke:phase4`：完整 authorization code + PKCE、consent、token、refresh token 与 claims 回归通过。
 - 新 Compose 镜像：migrator/minio-init 退出 0，app readiness 200；浏览器头像真实上传、移动断点、键盘与错误状态通过。
 - PostgreSQL custom dump 与 MinIO mirror 已恢复到隔离数据库/bucket，源/恢复计数一致；演练资源已清理。
-- GitHub 仓库已初始化并发布到 `HFLive/LiveSSO`；CI、Dependabot、CODEOWNERS、安全策略和 PR 模板在独立 PR 中维护。
+- GitHub 仓库已初始化并发布到 `HFLive/LiveSSO`；CI、Dependabot、CODEOWNERS、安全策略和 PR 模板已合并到 `main`。
 
 ## Phase 2 验收
 

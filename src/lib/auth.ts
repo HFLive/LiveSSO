@@ -90,6 +90,7 @@ export const auth = betterAuth({
       loginPage: "/sign-in",
       consentPage: "/consent",
       scopes: [...OAUTH_SCOPES],
+      validAudiences: [env.BETTER_AUTH_URL],
       allowDynamicClientRegistration: false,
       allowUnauthenticatedClientRegistration: false,
       clientPrivileges: () => false,

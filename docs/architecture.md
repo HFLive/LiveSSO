@@ -87,6 +87,7 @@ HFLive 领域表已包含邀请、受信设备、风险 challenge、审计、资
 
 - 公开注册和 dynamic client registration 始终关闭。
 - redirect URI 精确匹配；client 和 scope 由管理员审批。
+- OAuth access token audience 固定为单一 issuer `BETTER_AUTH_URL`；资源服务必须精确验证自身 audience，不把 RFC 8707 `resource` 当作额外授权边界。
 - 登录响应避免用户枚举，登录路径使用数据库限流。
 - 密码、OTP、token、code、secret 和私钥不得进入日志或文档。
 - 新设备/风险登录使用邮箱 OTP；受信设备最长 30 天；TOTP 默认关闭。

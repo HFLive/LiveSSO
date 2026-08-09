@@ -33,11 +33,11 @@ suite("Phase 4 internal applications", () => {
     await database.$disconnect();
   });
 
-  function token(clientId: string, clientSecret: string, scope: string) {
+  function token(clientId: string, clientSecret: string, scope: string, resource?: string) {
     return auth.handler(new Request("http://localhost:3000/api/auth/oauth2/token", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded", authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` },
-      body: new URLSearchParams({ grant_type: "client_credentials", scope }),
+      body: new URLSearchParams({ grant_type: "client_credentials", scope, ...(resource ? { resource } : {}) }),
     }));
   }
 
@@ -70,9 +70,14 @@ suite("Phase 4 internal applications", () => {
   it("issues a least-privilege M2M token accepted by the Directory status API", async () => {
     const client = await createApprovedClient(database, { actorUserId: adminId, name: "Directory reader", redirectUris: [], scopes: ["directory:user:status"] });
     createdClientIds.push(client.clientId);
+    const wrongAudience = await token(client.clientId, client.clientSecret, "directory:user:status", "https://other-resource.example");
+    expect(wrongAudience.status).toBe(400);
+    expect(await wrongAudience.json()).toMatchObject({ error: "invalid_request" });
+
     const response = await token(client.clientId, client.clientSecret, "directory:user:status");
     expect(response.status).toBe(200);
     const body = await response.json() as { access_token: string };
+    expect(body.access_token).not.toContain(".");
     const { GET } = await import("../../app/api/directory/users/[userId]/status/route");
     const directory = await GET(new Request(`http://localhost:3000/api/directory/users/${userId}/status`, { headers: { authorization: `Bearer ${body.access_token}` } }), { params: Promise.resolve({ userId }) });
     expect(directory.status).toBe(200);

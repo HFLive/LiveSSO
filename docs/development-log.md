@@ -224,6 +224,35 @@
 
 - 私有 GitHub Free 仓库无法启用 branch protection/ruleset；当前以 CODEOWNERS、Draft PR 和人工评审约定补足，升级 Team 或公开后再启用强制规则。
 
+## 2026-08-09 — 依赖安全基线
+
+### 目标
+
+- 处理仓库启用 Dependabot 后发现的 16 个 npm 告警，同时避免为清零告警把认证核心直接升级到预发布版本。
+
+### 实现
+
+- 移除代码、脚本和文档均未使用的 `@better-auth/cli@1.4.21`；继续使用 Prisma CLI 管理当前手写并审查的 schema 与 migration。
+- 锁文件删除该 CLI 带入的旧 Better Auth、Drizzle ORM、Lodash 和相关工具链，共减少 66 个安装包。
+- OAuth Provider 显式固定单一 `validAudiences: [BETTER_AUTH_URL]`；Directory JWT 校验继续只接受 issuer audience。
+
+### 关键决定或问题
+
+- `@better-auth/oauth-provider@1.6.26` 的 GHSA-p2fr-6hmx-4528 仅在 1.7 beta/RC 中修复，且升级需要 schema migration 和 claims API 变更，本轮不采用预发布认证依赖。
+- 当前部署不配置多 audience，资源服务也不依赖客户端选择的 `resource` 做授权；按公告 workaround 固定单一 audience，并保留告警直至稳定版修复可用。
+
+### 验证
+
+- 移除前 `pnpm audit` 为 1 critical、9 high、4 moderate、1 low；移除后仅剩上述 1 个 moderate runtime 告警。
+- `pnpm install --frozen-lockfile`、`pnpm validate` 和使用一次性构建占位 secret 的生产构建通过；20 个 Next.js 路由完成生成。
+- Phase 4 真实集成测试通过，并新增非白名单 `resource` 被 400 拒绝、M2M opaque token 继续通过 Directory 最小权限校验的回归断言。
+- 在独立 3100 端口运行新生产构建，完整 OIDC authorization code + PKCE、state、nonce、consent、token、refresh token 与 claims smoke 通过；临时服务已停止。
+- migrator 与 app Docker 镜像实际构建通过，容器内 frozen lockfile 安装和供应链策略检查通过。
+
+### 遗留事项
+
+- Better Auth 1.7 稳定版发布后，单独评估 schema migration、`customAccessTokenClaims` API、授权码/刷新令牌 resource 绑定和回滚，再关闭 GHSA-p2fr-6hmx-4528。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：
