@@ -217,7 +217,8 @@
 - 生产构建通过，20 个 Next.js 路由完成生成。
 - Draft PR #1 首轮 GitHub Actions 中，`validate-and-build` 与 `container-build` 通过；`integration` 因全新 runner 未生成 Prisma Client 而失败。
 - 已在集成任务安装依赖后增加 `pnpm db:generate`，并把两个官方 Action 更新到当前 v7 稳定版本的完整 SHA。
-- 修正后本地 Prisma Client 生成、YAML 解析、Compose 配置及 Phase 2–5 四组真实集成测试全部通过；第二轮 GitHub-hosted runner 结果将在推送后核验。
+- 修正后本地 Prisma Client 生成、YAML 解析、Compose 配置及 Phase 2–5 四组真实集成测试全部通过。
+- Draft PR #1 第二轮 GitHub Actions（run `31306012397`）三项全部通过：`integration` 1 分 14 秒、`validate-and-build` 1 分 22 秒、`container-build` 1 分 53 秒。
 
 ### 遗留事项
 
