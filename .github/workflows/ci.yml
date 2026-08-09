@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BETTER_AUTH_URL: http://localhost:3000
+  NEXT_PUBLIC_AUTH_URL: http://localhost:3000
+  BETTER_AUTH_SECRET: ci-only-auth-secret-at-least-32-characters
+  SECURITY_HASH_SECRET: ci-only-hash-secret-at-least-32-characters
+  OUTBOX_WORKER_SECRET: ci-only-worker-secret-at-least-32-characters
+  DATABASE_URL: postgresql://hflive:hflive@localhost:55432/hflive_auth
+  DIRECT_DATABASE_URL: postgresql://hflive:hflive@localhost:55432/hflive_auth
+  DEPLOYMENT_MODE: self_hosted
+  MAIL_ENABLED: "false"
+  OBJECT_STORAGE_ENABLED: "false"
+
+jobs:
+  validate-and-build:
+    name: validate-and-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate
+        run: pnpm validate
+      - name: Build
+        run: pnpm build
+
+  integration:
+    name: integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Start PostgreSQL, MinIO and Mailpit
+        run: |
+          docker compose up -d --wait postgres minio mailpit
+          docker compose run --rm minio-init
+      - name: Apply migrations
+        run: pnpm db:deploy
+      - name: Run database and authentication suites
+        run: |
+          pnpm test:db
+          pnpm test:phase3
+          pnpm test:phase4
+          pnpm test:phase5
+      - name: Show dependency logs on failure
+        if: failure()
+        run: docker compose logs --no-color postgres minio mailpit
+      - name: Stop disposable dependencies
+        if: always()
+        run: docker compose down -v --remove-orphans
+
+  container-build:
+    name: container-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+      - name: Build migrator image
+        run: docker build --target migrator -t hflive-auth-migrator:ci .
+      - name: Build application image
+        run: docker build -t hflive-auth-app:ci .

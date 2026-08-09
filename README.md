@@ -1,5 +1,7 @@
 # HFLive Auth
 
+[![CI](https://github.com/HFLive/LiveSSO/actions/workflows/ci.yml/badge.svg)](https://github.com/HFLive/LiveSSO/actions/workflows/ci.yml)
+
 HFLive 内部项目的统一身份服务。官方 issuer 计划固定为 `https://auth.hsfz.live`，首个接入方是 LiveBoard。
 
 完整方向与阶段划分见 [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)。Phase 0–4 已完成；Phase 5 的头像、对象存储、Docker/MinIO 和备份恢复已通过本地验收，官方 Vercel + PostgreSQL + R2 + 邮件 API 仍等待真实环境授权验证。LiveBoard 接入将在后续阶段推进。
@@ -12,6 +14,7 @@ HFLive 内部项目的统一身份服务。官方 issuer 计划固定为 `https:
 - [开发日志](./docs/development-log.md)
 - [本地开发与验证](./docs/local-development.md)
 - [Codex/AI 开发约束](./AGENTS.md)
+- [安全漏洞报告](./SECURITY.md)
 
 ## 本地开发
 

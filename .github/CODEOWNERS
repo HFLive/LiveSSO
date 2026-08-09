@@ -1,0 +1,13 @@
+* @cyx2007 @xiaoxuan010
+
+# Authentication, protocol, persistence and deployment boundaries require both
+# platform owners to be notified even when repository rules cannot enforce it.
+/src/lib/auth.ts @cyx2007 @xiaoxuan010
+/src/lib/risk-auth-plugin.ts @cyx2007 @xiaoxuan010
+/src/lib/security/ @cyx2007 @xiaoxuan010
+/src/app/api/auth/ @cyx2007 @xiaoxuan010
+/prisma/ @cyx2007 @xiaoxuan010
+/.github/ @cyx2007 @xiaoxuan010
+/Dockerfile @cyx2007 @xiaoxuan010
+/compose.yaml @cyx2007 @xiaoxuan010
+/vercel.json @cyx2007 @xiaoxuan010

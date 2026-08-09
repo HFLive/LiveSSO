@@ -195,6 +195,32 @@
 - 当前工作区没有 Vercel、托管 PostgreSQL、R2 和生产邮件 API 的授权配置，因此官方真实环境验收尚未执行。Phase 5 不能标记全部完成，也不能开始生产上线。
 - 获得官方资源后按 Phase 5 参考清单执行 migration、邮件、头像、OIDC/Directory `picture` 和 webhook 全链路验收。
 
+## 2026-08-09 — GitHub CI 与仓库治理
+
+### 目标
+
+- 为新发布的 `HFLive/LiveSSO` 建立最小权限 CI、依赖更新、安全报告和评审入口。
+- 让普通校验、真实依赖集成测试和容器构建在 pull request 上自动回归。
+
+### 实现
+
+- 增加 `validate-and-build`、`integration`、`container-build` 三个 GitHub Actions job；工作流只有 contents read 权限。
+- 仅使用 GitHub 官方 `checkout` 与 `setup-node` Action，并固定完整 commit SHA；pnpm 由 Corepack 锁定到 11.7.0。
+- 集成 job 使用 disposable PostgreSQL、MinIO、Mailpit 和 volume，应用正式 migration 后运行 Phase 2–5 专项。
+- 增加 pnpm/GitHub Actions 每周 Dependabot 更新、CODEOWNERS、中文 PR 模板和私密漏洞报告策略。
+- README 增加 CI 状态和安全入口；开发文档同步仓库、CI 与私有 Free 分支保护限制。
+
+### 验证
+
+- CI 与 Dependabot YAML 可由本地 YAML parser 读取；Compose 配置校验通过，`minio-init` 实际退出 0。
+- `pnpm validate`：11 项普通测试通过，专项按开关跳过。
+- 生产构建通过，20 个 Next.js 路由完成生成。
+- GitHub-hosted runner 结果将在 Draft PR 创建后核验，不以本地结果替代远端 CI。
+
+### 遗留事项
+
+- 私有 GitHub Free 仓库无法启用 branch protection/ruleset；当前以 CODEOWNERS、Draft PR 和人工评审约定补足，升级 Team 或公开后再启用强制规则。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

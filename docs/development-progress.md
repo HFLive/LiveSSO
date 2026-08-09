@@ -56,6 +56,7 @@
 - `pnpm oidc:smoke:phase4`：完整 authorization code + PKCE、consent、token、refresh token 与 claims 回归通过。
 - 新 Compose 镜像：migrator/minio-init 退出 0，app readiness 200；浏览器头像真实上传、移动断点、键盘与错误状态通过。
 - PostgreSQL custom dump 与 MinIO mirror 已恢复到隔离数据库/bucket，源/恢复计数一致；演练资源已清理。
+- GitHub 仓库已初始化并发布到 `HFLive/LiveSSO`；CI、Dependabot、CODEOWNERS、安全策略和 PR 模板在独立 PR 中维护。
 
 ## Phase 2 验收
 
@@ -139,5 +140,5 @@ Phase 4 已完成以下内部应用路径：
 - 官方环境尚未验收，不能将本地构建或 MinIO 结果表述为 Vercel/R2 生产通过。
 - 自部署关闭邮件时邀请/恢复不可用，风险登录明确降级为密码登录并记录审计；官方生产禁止关闭邮件。
 - 普通登录用户的 OAuth client 管理权限仍默认全部拒绝；所有 client 变更必须走平台管理员控制面。
-- `live_oss` 初始化时不是 Git 仓库；任何提交、分支或 PR 操作前必须重新确认状态。
+- 仓库默认分支为 `main`；后续改动使用独立分支和 Draft PR。私有 Free 仓库暂不能启用 branch protection/ruleset，需依赖 CODEOWNERS 与人工评审约定。
 - 本地 Docker volume 包含 disposable 测试用户与 client，官方部署必须使用全新数据库和 secret。

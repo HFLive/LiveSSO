@@ -76,6 +76,16 @@ pnpm test:phase5
 
 `pnpm test:phase5` 需要本地 PostgreSQL 和 MinIO，并要求 `minio-init` 已创建 `hflive-auth` bucket；它验证真实对象写入、512×512 WebP 规范化、版本替换和资料事件。
 
+## GitHub CI
+
+`.github/workflows/ci.yml` 对 `main` push 和 pull request 运行三个最小权限 job：
+
+- `validate-and-build`：锁定 Node.js 22 与 pnpm 11.7.0，执行 `pnpm validate` 和生产构建。
+- `integration`：启动 disposable PostgreSQL、MinIO、Mailpit，应用 migration 后执行 Phase 2–5 专项测试，并总是删除 CI volume。
+- `container-build`：验证 Compose 配置并实际构建 migrator 与 standalone app 镜像。
+
+工作流只使用 GitHub 官方 Action，并固定到完整 commit SHA；`GITHUB_TOKEN` 默认只有 contents read 权限。CI 变量均为 runner 内 disposable 值，禁止把生产 secret 写入 workflow。
+
 事件 worker 端点必须配置至少 32 字符的 `OUTBOX_WORKER_SECRET`；Vercel Cron 也可使用平台注入的 `CRON_SECRET`。自部署需要每分钟以 Bearer token 调用 `/api/internal/outbox/dispatch`。两类 secret 都不能写入日志或接收方配置。
 
 认证/OIDC 改动还必须针对已登记的测试 client 运行：
