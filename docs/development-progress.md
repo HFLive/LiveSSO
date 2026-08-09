@@ -136,7 +136,7 @@ Phase 4 已完成以下内部应用路径：
 - Vercel Hobby 项目已从个人私有 fork 创建并成功部署，`auth.hsfz.live` 已绑定；health、Neon readiness、`hkg1`、OIDC discovery/issuer 与 Ed25519 JWKS 已通过正式域名只读验收。
 - Neon 的 6 个 migration 已成功应用；私有 R2 bucket、bucket 级对象读写凭据、Resend 已验证邮件域名及发送专用 API key 已配置，仍须验证真实邮件接收和 R2 对象读写。
 - Cloudflare 外部调度器尚未部署。
-- 生产 bootstrap 尚未执行；当前脚本在 Phase 2 角色模型加入后未显式创建 `ADMIN`，修复和验证完成前不得写入首个生产用户。
+- 初始管理员角色与审计修复已随 `f8223d6` 部署；首次生产 bootstrap 连接 Neon direct 时未能在 Prisma 默认 2 秒 `maxWait` 内开始事务，因而以 `P2028` 失败且未创建用户。仅限 bootstrap 的事务等待窗口修复合并并重新部署前不要重试。
 
 ## 已知限制与注意事项
 

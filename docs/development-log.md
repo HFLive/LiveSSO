@@ -340,6 +340,35 @@
 
 - 修复合并后仅在确认生产 `user` 表为空时执行一次 bootstrap，并验证管理员登录与审计记录。
 
+## 2026-08-09 — Neon 生产 bootstrap 事务等待窗口
+
+### 目标
+
+- 修复初始管理员命令连接 Neon Singapore direct endpoint 时无法在 Prisma 默认等待窗口内开始事务的问题。
+
+### 实现
+
+- 仅将 bootstrap interactive transaction 的 `maxWait` 和 `timeout` 显式设为 15 秒；不改变 Web、认证或其他数据库请求的连接与超时策略。
+- 官方 Neon 部署说明改为显式使用 `sslmode=verify-full`，并保留 Neon 提供的 channel binding 参数，避免依赖 `pg` 下一主版本将变化的兼容语义。
+- 单元测试新增 bootstrap 事务选项断言。
+
+### 关键决定或问题
+
+- 首次生产执行在事务开始前以 Prisma `P2028` 失败，因此没有创建用户或审计记录；同次输出的 SSL mode 警告不是该失败的直接原因。
+- 初始化事务包含 advisory lock、空库检查和两次写入；提高的是等待取得连接/开始事务的窗口，不移除并发保护。
+
+### 验证
+
+- bootstrap 单元测试通过，覆盖 15 秒事务等待/执行窗口以及既有管理员创建与重复执行拒绝契约。
+- `pnpm validate` 通过：Lint、类型检查和 16 个常规测试全部成功。
+- Vercel managed-output 生产构建通过，20 个页面/路由生成完成；`.next/standalone` 不存在且 server tracing 清单存在。
+- self-hosted standalone 生产构建通过，standalone server 与 server tracing 清单均存在。
+- 第一次本地 Vercel 构建模拟未注入 build-only 生产必需变量，被环境校验按设计拒绝；加入非生产占位值后重新构建通过，未使用生产 secret。
+
+### 遗留事项
+
+- 修复合并并重新部署后，使用 direct URL 重试一次 bootstrap，再验证管理员登录和审计记录。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

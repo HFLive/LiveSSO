@@ -30,7 +30,7 @@
 ## 官方部署检查
 
 1. Vercel production 绑定固定域名 `auth.hsfz.live`，`BETTER_AUTH_URL` 与 `NEXT_PUBLIC_AUTH_URL` 均为 `https://auth.hsfz.live`。
-2. `DATABASE_URL` 使用 pooled PostgreSQL URL，`DIRECT_DATABASE_URL` 使用 direct URL；部署前单独运行 `pnpm db:deploy`。
+2. `DATABASE_URL` 使用 pooled PostgreSQL URL，`DIRECT_DATABASE_URL` 使用 direct URL；Neon 连接串显式使用 `sslmode=verify-full`（保留 Neon 提供的 `channel_binding=require`），避免依赖 `pg` 即将变化的 `sslmode=require` 兼容语义；部署前单独运行 `pnpm db:deploy`。
 3. R2 bucket 保持私有，S3 API token 仅授予该 bucket 的对象读写；Vercel 使用 R2 S3 endpoint，`S3_FORCE_PATH_STYLE=false`。
 4. `DEPLOYMENT_MODE=official`、`MAIL_ENABLED=true`、`MAIL_TRANSPORT=http`，并配置邮件 API；同时配置独立的会话、摘要和 worker secret。
 5. Vercel Pro 可直接配置每分钟 Cron。Hobby 不支持该频率，必须部署 `infrastructure/cloudflare-outbox-scheduler`，将同一 `OUTBOX_WORKER_SECRET` 作为 Cloudflare Worker secret 注入，并保持 `* * * * *` Cron Trigger。

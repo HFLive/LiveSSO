@@ -32,6 +32,10 @@ describe("initial administrator bootstrap", () => {
 
     await createInitialAdmin(database, input);
 
+    expect(database.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      maxWait: 15_000,
+      timeout: 15_000,
+    });
     expect(transaction.$queryRaw).toHaveBeenCalledOnce();
     expect(transaction.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
       transaction.user.count.mock.invocationCallOrder[0],
