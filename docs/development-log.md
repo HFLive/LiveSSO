@@ -235,6 +235,7 @@
 - 移除代码、脚本和文档均未使用的 `@better-auth/cli@1.4.21`；继续使用 Prisma CLI 管理当前手写并审查的 schema 与 migration。
 - 锁文件删除该 CLI 带入的旧 Better Auth、Drizzle ORM、Lodash 和相关工具链，共减少 66 个安装包。
 - OAuth Provider 显式固定单一 `validAudiences: [BETTER_AUTH_URL]`；Directory JWT 校验继续只接受 issuer audience。
+- Dependabot 忽略 `@types/node` 主版本更新但继续接收 24.x minor/patch，避免 Node.js 22 项目被自动升级到 Node 26 类型基线。
 
 ### 关键决定或问题
 
