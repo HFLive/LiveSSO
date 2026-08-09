@@ -1,6 +1,6 @@
 # 架构与关键边界
 
-状态：Phase 5 自部署基线  
+状态：Phase 0–5 已验收；Phase 6 LiveBoard 后端接入进行中
 最后更新：2026-08-09
 
 ## 系统目标
@@ -51,7 +51,7 @@ OIDC token 不携带 LiveBoard 管理员或业务角色。接入应用必须依�
 | LiveBoard member/admin/super_admin | LiveBoard |
 | 课堂、内容、通知和其他业务数据 | 对应接入应用 |
 
-LiveBoard 未来以 `(issuer, subject)` 建立 `ExternalIdentity`。用户名或邮箱冲突不得自动合并；需要旧账号密码证明或管理员人工关联。JIT 只能创建普通成员，不能提升管理员权限。
+LiveBoard 将在 Phase 6 以 `(issuer, subject)` 建立 `ExternalIdentity`。用户名或邮箱冲突不得自动合并；需要旧账号密码证明或管理员人工关联。JIT 只能创建普通成员，不能提升管理员权限。
 
 ## 数据与运行状态
 
@@ -94,6 +94,6 @@ HFLive 领域表已包含邀请、受信设备、风险 challenge、审计、资
 - 全局封禁采用事件通知 + 接入方周期刷新，不追求数秒内强一致。
 - HFLive Auth 故障不能让接入应用自动提升权限；LiveBoard 保留受控回滚和本地紧急入口。
 
-## 当前未完成能力
+## 当前阶段边界
 
-头像上传、对象存储、版本化资料 URL、资料事件与 Docker/MinIO 路径已经实现并验收。官方 Vercel + 托管 PostgreSQL + R2 + 邮件 API 尚未在真实生产资源上验收，LiveBoard 接入也未开始，当前版本不可直接投入生产。
+HFLive Auth 的头像、对象存储、版本化资料 URL、资料事件、Docker/MinIO、自部署恢复和官方生产基础设施均已验收，核心身份平台已上线。LiveBoard 尚未接入；Phase 6 将先完成现有认证/数据模型审查和设计冻结，再实现 OIDC 映射、JIT、状态同步与回滚。正式 client 的 OIDC/Directory `picture` 和 `user.profile.changed` webhook 验收属于该接入链路。

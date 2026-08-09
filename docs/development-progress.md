@@ -1,8 +1,8 @@
 # 开发进度
 
 最后更新：2026-08-09  
-当前阶段：Phase 5 官方环境验收待执行  
-生产状态：不可上线
+当前阶段：Phase 6 LiveBoard 后端接入
+生产状态：HFLive Auth 核心平台已上线；LiveBoard 尚未接入
 
 本文件是项目当前完成度和下一步的唯一动态状态页。总体阶段定义见 [实施方案](../IMPLEMENTATION_PLAN.md)，Phase 1 的完成时证据见 [历史验收快照](../PHASE_1_STATUS.md)。
 
@@ -15,8 +15,8 @@
 | Phase 2 安全与领域数据 | 完成 | 领域模型、数据库约束、摘要策略、原子消费/租约和管理员审计 |
 | Phase 3 邀请/邮件/风险登录 | 完成 | 邀请、首次密码、邮件 OTP、恢复、风险规则和 30 天受信设备 |
 | Phase 4 内部应用管理 | 完成 | client 生命周期、Directory API、可靠签名事件与审计控制台 |
-| Phase 5 头像与正式部署 | 进行中 | 头像与 Docker/MinIO/恢复已验收；Vercel/PostgreSQL/R2/邮件真实环境待凭据 |
-| Phase 6 LiveBoard 后端 | 未开始 | 三种认证模式、ExternalIdentity、JIT、状态同步 |
+| Phase 5 头像与正式部署 | 完成 | 自部署、恢复、官方 Vercel/Neon/R2/Resend、调度和静态分发均已验收 |
+| Phase 6 LiveBoard 后端 | 进行中 | 先审查并冻结设计，再实现三种认证模式、ExternalIdentity、JIT、状态同步 |
 | Phase 7 LiveBoard 前端 | 未开始 | 登录入口、账号关联、统一资料入口 |
 | Phase 8 用户迁移 | 未开始 | 邀请、显式关联、hybrid 观察与回滚 |
 | Phase 9 上线运维 | 未开始 | 安全测试、备份恢复、轮换与事故流程 |
@@ -121,7 +121,7 @@ Phase 4 已完成以下内部应用路径：
 
 完整 API、scope、签名和 worker 契约见 [Phase 4 内部应用参考](./reference/phase4-internal-apps.md)。
 
-## Phase 5 当前验收
+## Phase 5 完成验收
 
 已完成：
 
@@ -141,15 +141,19 @@ Phase 4 已完成以下内部应用路径：
 - EdgeOne 可选静态资源分发已在生产启用：Vercel Production 仅上传 `/_next/static/*` 到 `static-auth.hsfz.live`；生产登录页已引用该 origin，CSS/JS/WOFF2 的 HTTP/2、MIME、immutable cache、CORS/CORP 与 EdgeOne cache hit 均通过外部验收。
 - API 缓存策略已硬化：JWKS 成功响应短期公开缓存，session/Directory/头像错误保持 `private, no-store`；头像非法 UUID 在查询数据库前返回 400。
 
-仍待完成：
+转入 Phase 6 的接入验收：
 
 - 以正式接入 client 运行完整 authorization code + PKCE OIDC smoke，并验证 OIDC/Directory `picture`。
-- 创建真实成员邀请以验收邀请邮件与接受流程，并用订阅 client 验证 `user.profile.changed` webhook 的投递状态。
+- 使用 LiveBoard 订阅 client 验证 `user.profile.changed` webhook 的生产投递状态。
+
+非阻塞运营验收：
+
+- 创建真实成员邀请，验收邀请邮件与接受流程；不在生产创建 disposable 测试账号。
 - 分别记录中国大陆与境外真实用户网络的加载时间和失败率；EdgeOne 技术链路通过不等于已经证明大陆访问提速。
 
 ## 已知限制与注意事项
 
-- 官方核心基础设施、管理员登录、风险 OTP 与 R2 头像链路已验收；正式 client 的 OIDC/Directory/webhook 和成员邀请链路仍不能表述为生产通过。
+- HFLive Auth 核心基础设施、管理员登录、风险 OTP 与 R2 头像链路已验收；LiveBoard 的 OIDC/Directory/webhook 接入仍不能表述为通过。
 - Vercel Hobby 不支持每分钟原生 Cron；官方 Hobby 部署必须使用仓库内 Cloudflare Worker Cron，且 Vercel 与 Worker 注入相同的独立 `OUTBOX_WORKER_SECRET`。
 - `hsfz.live` 未备案时 EdgeOne 只能选择 `overseas`，不能使用中国大陆节点；静态分发不承诺中国大陆访问速度。
 - 自部署关闭邮件时邀请/恢复不可用，风险登录明确降级为密码登录并记录审计；官方生产禁止关闭邮件。

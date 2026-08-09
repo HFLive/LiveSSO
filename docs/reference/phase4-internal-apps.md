@@ -27,7 +27,7 @@
 Phase 4 当前投递：
 
 - `user.status.changed`
-- `user.profile.changed`（契约已登记，资料修改流程将在 Phase 5 接入）
+- `user.profile.changed`（Phase 5 资料修改流程已接入并通过本地与生产头像链路验收）
 
 管理员为 client 登记 HTTPS webhook（本地/自部署开发可使用 HTTP）。独立 webhook secret 使用 AES-256-GCM 加密保存，只在创建时返回。每个订阅 client 对应独立 `OutboxEvent`，避免一个接收方失败影响其他接收方。
 

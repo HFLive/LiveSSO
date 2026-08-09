@@ -1,6 +1,6 @@
 # HFLive Auth 实施方案
 
-状态：Phase 0–4 已完成；Phase 5 代码与自部署验收完成，等待官方环境验收  
+状态：Phase 0–5 已完成；Phase 6 LiveBoard 后端接入进行中
 官方域名：`https://auth.hsfz.live`  
 首个接入方：HFLive 官方 LiveBoard
 
@@ -224,4 +224,4 @@ OIDC 回调完成后仍创建 LiveBoard 自己的 7 天本地会话，以复用�
 
 ## 10. 当前实现状态
 
-Phase 0–4 已完成基础契约、工程/OIDC 骨架、安全领域数据、邀请制账号、事务邮件、风险 OTP、受信设备、密码恢复、内部 client 管理、Directory API、可靠事件投递和审计控制台。Phase 5 已完成头像对象存储、版本化 URL、Docker/MinIO 和备份恢复验收；由于当前工作区没有 Vercel、托管 PostgreSQL、R2 与邮件供应商生产凭据，官方环境验收仍待执行，不能宣称 Phase 5 全部完成或进入生产。
+Phase 0–5 已完成基础契约、工程/OIDC 骨架、安全领域数据、邀请制账号、事务邮件、风险 OTP、受信设备、密码恢复、内部 client 管理、Directory API、可靠事件投递、头像对象存储、版本化 URL、Docker/MinIO 和备份恢复。官方 Vercel、Neon PostgreSQL、R2、Resend、Cloudflare outbox 调度与 EdgeOne 静态分发均已通过真实生产验收，HFLive Auth 核心平台已上线。当前进入 Phase 6：审查 LiveBoard 现有认证和数据模型，冻结接入设计，再实现三种认证模式、`ExternalIdentity`、OIDC start/callback/link、JIT 普通成员、状态同步与故障回滚。

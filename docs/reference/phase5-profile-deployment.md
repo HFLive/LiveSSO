@@ -1,6 +1,6 @@
 # Phase 5 头像与部署参考
 
-状态：实现完成，自部署与官方核心基础设施已验收，正式 client 接入验收待完成
+状态：Phase 5 完成；正式 client 的 OIDC/Directory/webhook 验收转入 Phase 6
 最后更新：2026-08-09
 
 ## 头像契约
@@ -76,7 +76,7 @@ Worker 只向 `/api/internal/outbox/dispatch` 发送带 Bearer 鉴权的 HTTPS `
 - 私有 R2 通过真实头像上传、同源读取和刷新后持久化验收。
 - Cloudflare Worker 使用加密 `OUTBOX_WORKER_SECRET` 和 `* * * * *` trigger；版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 的真实 scheduled invocation 为 `outcome: ok`、无异常。
 - EdgeOne Makers `hflive-auth-static-eo` 使用排除中国大陆的全球可用区，`static-auth.hsfz.live` 已启用 Force HTTPS 与 HTTP/2；Vercel Production 已完成真实静态上传、公开回读和登录页引用验收。
-- 剩余验收边界为正式 client 的 OIDC smoke、OIDC/Directory `picture`、成员邀请流程和 `user.profile.changed` webhook。
+- Phase 5 已完成。正式 client 的 OIDC smoke、OIDC/Directory `picture` 与 `user.profile.changed` webhook 转入 Phase 6 LiveBoard 接入验收；真实成员邀请和跨区域性能测量作为非阻塞运营验收继续记录。
 
 ## 自部署检查
 

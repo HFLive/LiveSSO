@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/HFLive/LiveSSO/actions/workflows/ci.yml/badge.svg)](https://github.com/HFLive/LiveSSO/actions/workflows/ci.yml)
 
-HFLive 内部项目的统一身份服务。官方 issuer 计划固定为 `https://auth.hsfz.live`，首个接入方是 LiveBoard。
+HFLive 内部项目的统一身份服务。官方 issuer 固定为 `https://auth.hsfz.live`，首个接入方是 LiveBoard。
 
-完整方向与阶段划分见 [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)。Phase 0–4 已完成；Phase 5 的头像、对象存储、Docker/MinIO 和备份恢复已通过本地验收，官方 Vercel + PostgreSQL + R2 + 邮件 API 仍等待真实环境授权验证。LiveBoard 接入将在后续阶段推进。
+完整方向与阶段划分见 [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)。Phase 0–5 已完成，官方 Vercel + Neon PostgreSQL + R2 + Resend、外部 outbox 调度和 EdgeOne 静态分发均已通过生产验收。当前进入 Phase 6 LiveBoard 后端接入。
 
 ## 项目文档
 
