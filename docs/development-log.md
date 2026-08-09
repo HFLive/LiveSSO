@@ -283,6 +283,34 @@
 
 - 正式域名可用且 Vercel 环境变量生效后部署 Worker，并记录首次成功调度证据。
 
+## 2026-08-09 — Vercel 与 Docker 双构建产物
+
+### 目标
+
+- 修复 Vercel 首次部署在收集 Next.js tracing 产物时缺少 `.next/next-server.js.nft.json` 的构建错误，同时保留 Docker standalone 镜像。
+
+### 实现
+
+- Vercel 平台或 `DEPLOYMENT_MODE=official` 构建交由 Vercel Next.js 框架集成生成函数产物，不再强制 `output: "standalone"`。
+- 非 Vercel/self-hosted 构建继续生成 `.next/standalone`，Dockerfile runner stage 无需改变。
+
+### 关键决定或问题
+
+- Vercel 首次构建已完成 Next.js 编译，但平台收集阶段读取不存在的 standalone tracing 清单并以 `ENOENT` 失败；数据库 migration 已在部署前成功应用，不属于本次错误原因。
+- 两类部署共享业务代码，但使用各自原生的打包产物，避免 Vercel 函数收集器与 Docker standalone 目录互相干扰。
+
+### 验证
+
+- `VERCEL=1 DEPLOYMENT_MODE=official` 的生产构建通过，20 个页面/路由生成完成；`.next/standalone` 不存在且 `.next/next-server.js.nft.json` 存在。
+- `DEPLOYMENT_MODE=self_hosted` 的生产构建通过，`.next/standalone` 与 server tracing 清单均存在。
+- `pnpm validate` 通过：Lint、类型检查和常规测试均成功。
+- `docker build -t hflive-auth:vercel-output-fix .` 通过，runner stage 成功复制 standalone 与静态产物；仅报告既有 build-only 占位 ENV 的 Docker secret lint 警告，不包含生产 secret。
+- 真实 Vercel 重新部署仍待验收。
+
+### 遗留事项
+
+- 修复合并并同步个人 fork 后重新部署，记录 deployment URL 与 readiness。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

@@ -38,6 +38,8 @@
 
 正式验收必须记录实际 deployment URL、migration 结果、R2 对象元数据、邮件 provider 接收结果和完整 OIDC smoke；不能用本地构建替代。
 
+Vercel 使用框架集成生成函数产物，`DEPLOYMENT_MODE=official` 或平台 `VERCEL=1` 时不启用 Next.js `output: "standalone"`。Docker/self-hosted 构建继续生成 `.next/standalone`，供 Dockerfile 的 runner stage 使用。两种产物不能在部署配置中混用。
+
 ### Vercel Hobby 的 Cloudflare 调度器
 
 `vercel.json` 不登记 Cron，以免 Hobby 部署因每分钟计划被拒绝。Cloudflare Worker 配置位于 `infrastructure/cloudflare-outbox-scheduler/wrangler.jsonc`，生产域名固定为 `https://auth.hsfz.live`。部署 Worker 前先在 Vercel 设置至少 32 字符的 `OUTBOX_WORKER_SECRET`，再把完全相同的值通过 Cloudflare secret 管理注入 Worker；不得把值写入 Wrangler 配置、命令参数、日志或仓库。

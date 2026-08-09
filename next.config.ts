@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
+const usesVercelManagedOutput = process.env.VERCEL === "1" || process.env.DEPLOYMENT_MODE === "official";
+
 const nextConfig: NextConfig = {
   agentRules: false,
-  output: "standalone",
+  output: usesVercelManagedOutput ? undefined : "standalone",
   poweredByHeader: false,
   experimental: {
     typedEnv: true,
