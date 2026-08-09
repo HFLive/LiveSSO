@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "../../generated/prisma/client";
-import { createInitialAdmin } from "./bootstrap-admin";
+import { createInitialAdmin, repairInitialAdminEmail } from "./bootstrap-admin";
 
 function mockDatabase(existingUsers = 0) {
   const transaction = {
@@ -19,7 +19,7 @@ function mockDatabase(existingUsers = 0) {
 
 const input = {
   id: "00000000-0000-4000-8000-000000000001",
-  email: "admin@example.invalid",
+  email: "admin@example.com",
   username: "initial_admin",
   name: "Initial administrator",
   passwordHash: "hashed-password",
@@ -67,6 +67,82 @@ describe("initial administrator bootstrap", () => {
       "Initial administrator creation is locked because the database already contains a user.",
     );
     expect(transaction.user.create).not.toHaveBeenCalled();
+    expect(transaction.auditEvent.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid administrator email before starting a transaction", async () => {
+    const { database } = mockDatabase();
+
+    await expect(createInitialAdmin(database, { ...input, email: "not-an-email" })).rejects.toThrow(
+      "Initial administrator email must be a valid email address.",
+    );
+    expect(database.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+function mockRepairDatabase(existingEmail = "'admin@example.com'") {
+  const administrator = {
+    id: input.id,
+    email: existingEmail,
+    platformRole: "ADMIN",
+    accountStatus: "ACTIVE",
+  };
+  const transaction = {
+    $queryRaw: vi.fn().mockResolvedValue([{ locked: 1 }]),
+    user: {
+      findMany: vi.fn().mockResolvedValue([administrator]),
+      update: vi.fn().mockResolvedValue({ ...administrator, email: "admin@example.com" }),
+    },
+    loginChallenge: { updateMany: vi.fn().mockResolvedValue({ count: 2 }) },
+    auditEvent: {
+      findFirst: vi.fn().mockResolvedValue({ id: "00000000-0000-4000-8000-000000000002" }),
+      create: vi.fn().mockResolvedValue({}),
+    },
+  };
+  const database = {
+    $transaction: vi.fn(async (callback) => callback(transaction)),
+  } as unknown as PrismaClient;
+  return { database, transaction };
+}
+
+describe("initial administrator email repair", () => {
+  it("repairs only the malformed bootstrap administrator and audits the change", async () => {
+    const { database, transaction } = mockRepairDatabase();
+
+    await repairInitialAdminEmail(database, { email: "Admin@Example.com", now: input.now });
+
+    expect(database.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      maxWait: 15_000,
+      timeout: 15_000,
+    });
+    expect(transaction.$queryRaw).toHaveBeenCalledOnce();
+    expect(transaction.user.update).toHaveBeenCalledWith({
+      where: { id: input.id },
+      data: { email: "admin@example.com", emailVerified: true },
+    });
+    expect(transaction.loginChallenge.updateMany).toHaveBeenCalledWith({
+      where: { userId: input.id, status: "PENDING" },
+      data: { status: "CANCELLED", cancelledAt: input.now },
+    });
+    expect(transaction.auditEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        eventType: "platform.admin.bootstrap_email_repaired",
+        actorType: "SYSTEM",
+        subjectUserId: input.id,
+        outcome: "SUCCESS",
+        severity: "CRITICAL",
+        metadata: expect.objectContaining({ cancelledChallenges: 2 }),
+      }),
+    });
+  });
+
+  it("refuses to replace an already valid administrator email", async () => {
+    const { database, transaction } = mockRepairDatabase("admin@example.com");
+
+    await expect(repairInitialAdminEmail(database, { email: "new@example.com" })).rejects.toThrow(
+      "Initial administrator email repair refuses to replace an already valid email address.",
+    );
+    expect(transaction.user.update).not.toHaveBeenCalled();
     expect(transaction.auditEvent.create).not.toHaveBeenCalled();
   });
 });

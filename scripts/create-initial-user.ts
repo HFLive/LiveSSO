@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
+import * as z from "zod";
 import { prisma } from "../src/lib/prisma";
 import { createInitialAdmin } from "../src/lib/security/bootstrap-admin";
 
@@ -13,6 +14,10 @@ if (!email || !username || !name || !password) {
   throw new Error(
     "Set BOOTSTRAP_EMAIL, BOOTSTRAP_USERNAME, BOOTSTRAP_NAME and BOOTSTRAP_PASSWORD before running this command.",
   );
+}
+
+if (!z.email().max(254).safeParse(email).success) {
+  throw new Error("BOOTSTRAP_EMAIL must be a valid email address.");
 }
 
 if (!/^[a-z0-9_]{3,32}$/.test(username)) {

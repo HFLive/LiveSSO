@@ -55,6 +55,8 @@ pnpm user:create-initial
 
 脚本使用 PostgreSQL advisory lock 串行化空库检查，显式创建 `ADMIN` 并写入 SYSTEM 审计。数据库已有用户时脚本会拒绝执行；正式的后续账号必须通过管理员邀请创建，并保持默认 `USER`。
 
+`BOOTSTRAP_EMAIL` 必须是最长 254 字符的普通邮箱地址，不能带 shell 引号或显示名。历史版本如果已经创建了唯一 bootstrap 管理员且其邮箱格式无效，可在确认数据库仍只有该一个用户后运行 `pnpm user:repair-initial-email`；命令通过 `REPAIR_ADMIN_EMAIL` 读取新地址，只允许替换无效邮箱，同时取消遗留的待处理登录 challenge 并写入 CRITICAL SYSTEM 审计。已是有效邮箱或无法证明唯一 bootstrap 管理员时会拒绝执行。
+
 ## 常规验证
 
 ```bash

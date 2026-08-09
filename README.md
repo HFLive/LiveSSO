@@ -48,6 +48,8 @@ pnpm user:create-initial
 
 该命令在事务内取得 PostgreSQL advisory lock，只允许空数据库创建一个 `ADMIN`，并写入 `platform.admin.bootstrap` SYSTEM 审计。数据库已有任意用户后会拒绝运行；后续账号必须走管理员邀请流程且默认保持 `USER`。
 
+`BOOTSTRAP_EMAIL` 只接受普通邮箱地址，不要包含 shell 引号或 `Name <email>` 显示名。历史版本若已为唯一 bootstrap 管理员写入无效邮箱，可使用 `REPAIR_ADMIN_EMAIL` 配合 `pnpm user:repair-initial-email` 做一次受限修正；命令在现有邮箱有效、用户不唯一或无法验证 bootstrap 审计时都会拒绝执行。
+
 仓库还提供 `pnpm oidc:smoke`，用于对已登记的本地测试客户端执行完整 authorization code + PKCE、consent、token 和 ID token claim 验证。它要求通过 `OIDC_SMOKE_*` 环境变量传入测试账号与客户端凭据，凭据不会写入仓库。`pnpm test:phase3`、`pnpm test:phase4` 与 `pnpm test:phase5` 分别验证邀请/风险登录、内部应用/事件和真实 PostgreSQL + MinIO 头像路径。
 
 ## 数据库

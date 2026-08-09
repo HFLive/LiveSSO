@@ -369,6 +369,32 @@
 
 - 修复合并并重新部署后，使用 direct URL 重试一次 bootstrap，再验证管理员登录和审计记录。
 
+## 2026-08-09 — 初始管理员无效邮箱修复
+
+### 目标
+
+- 修复 bootstrap 只检查邮箱非空、允许无效值进入生产数据库并导致首次风险登录 OTP 被 Resend 拒绝的问题。
+
+### 实现
+
+- bootstrap 入口与领域函数都使用最长 254 字符的邮箱格式校验，拒绝 shell 引号、显示名和其他非普通邮箱值。
+- 新增受限修复命令：只允许唯一用户、有效 bootstrap SYSTEM 审计、`ACTIVE ADMIN` 且现有邮箱格式无效时更新邮箱。
+- 修复与 bootstrap 共用 advisory lock；事务内取消该管理员遗留的 `PENDING` 登录 challenge，并写入不包含邮箱值的 CRITICAL SYSTEM 审计。
+
+### 关键决定或问题
+
+- 正式登录已通过密码验证并进入新设备 OTP 路径；Resend 日志明确返回 `422 validation_error: Invalid to field`，因此不重新 bootstrap、不关闭风险登录，也不直接执行宽泛 SQL。
+
+### 验证
+
+- 新增专项单元测试覆盖无效 bootstrap 邮箱拒绝、受限修复、challenge 取消、审计和已有效邮箱拒绝；`pnpm validate` 通过，共 19 个常规测试成功。
+- 在独立临时 PostgreSQL 数据库应用 6 个 migration，模拟唯一 bootstrap ADMIN、无效邮箱和 `PENDING` challenge；修复后验证邮箱精确匹配、`emailVerified=true`、challenge=`CANCELLED`、`platform.admin.bootstrap_email_repaired|SYSTEM|CRITICAL`，第二次修复按设计拒绝，临时数据库已删除。
+- Vercel managed-output 与 self-hosted standalone 两类生产构建均通过，20 个页面/路由完成生成，产物模式断言通过。
+
+### 遗留事项
+
+- 修复合并后在生产 direct 连接上执行一次受限邮箱修复，重新登录并验证 Resend OTP、会话与管理页面。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

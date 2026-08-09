@@ -23,6 +23,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "user:create-initial": "tsx scripts/create-initial-user.ts",
+    "user:repair-initial-email": "tsx scripts/repair-initial-admin-email.ts",
     "oidc:smoke": "tsx scripts/oidc-smoke.ts",
     "oidc:smoke:phase4": "tsx scripts/phase4-oidc-smoke.ts"
   },
