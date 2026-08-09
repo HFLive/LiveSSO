@@ -254,6 +254,35 @@
 
 - Better Auth 1.7 稳定版发布后，单独评估 schema migration、`customAccessTokenClaims` API、授权码/刷新令牌 resource 绑定和回滚，再关闭 GHSA-p2fr-6hmx-4528。
 
+## 2026-08-09 — Hobby 官方部署调度方案
+
+### 目标
+
+- 在不升级 Vercel Pro 的前提下保留可靠事件每分钟分发，并解除 Hobby 部署对高频原生 Cron 的限制。
+
+### 实现
+
+- 从 `vercel.json` 移除 Hobby 不支持的每分钟 Cron。
+- 增加 Cloudflare Worker Cron 配置，每分钟以 HTTPS `POST` 和 Bearer secret 调用既有 outbox worker 端点。
+- Worker 强制 HTTPS、禁止跟随重定向，失败时只暴露 HTTP 状态码，不读取响应正文或记录 secret。
+- 更新 Phase 4/5 契约和进度，明确 Vercel 与 Cloudflare Worker 必须注入同一个独立 `OUTBOX_WORKER_SECRET`。
+
+### 关键决定或问题
+
+- Vercel Hobby 仅支持低频原生 Cron，不能满足当前每分钟 outbox 契约；外部调度只替换触发器，不改变数据库租约、重试、dead letter 或 webhook 签名语义。
+- Cloudflare Worker Free 每分钟约 1,440 次调用，低于当前免费请求配额；生产验收仍需检查实际 invocation 和 outbox 状态。
+
+### 验证
+
+- `pnpm validate` 通过：Lint、类型检查和常规测试均成功；新增 3 个 Worker 测试覆盖 Bearer 请求、HTTPS 限制、禁止重定向和不读取失败响应正文。
+- 使用一次性构建占位 secret 的 `pnpm build` 通过，20 个页面/路由完成生产构建；未配置生产专用摘要和 worker secret 时构建继续按安全门禁失败。
+- Wrangler 4.120.0 `deploy --dry-run` 通过，正确识别 `AUTH_ORIGIN` binding，未创建远程 Worker 或触发器。
+- Vercel 部署与 Cloudflare Cron 真实触发仍待验收。
+
+### 遗留事项
+
+- 正式域名可用且 Vercel 环境变量生效后部署 Worker，并记录首次成功调度证据。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

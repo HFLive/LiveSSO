@@ -32,10 +32,17 @@
 1. Vercel production 绑定固定域名 `auth.hsfz.live`，`BETTER_AUTH_URL` 与 `NEXT_PUBLIC_AUTH_URL` 均为 `https://auth.hsfz.live`。
 2. `DATABASE_URL` 使用 pooled PostgreSQL URL，`DIRECT_DATABASE_URL` 使用 direct URL；部署前单独运行 `pnpm db:deploy`。
 3. R2 bucket 保持私有，S3 API token 仅授予该 bucket 的对象读写；Vercel 使用 R2 S3 endpoint，`S3_FORCE_PATH_STYLE=false`。
-4. `DEPLOYMENT_MODE=official`、`MAIL_ENABLED=true`、`MAIL_TRANSPORT=http`，并配置邮件 API；同时配置独立的会话、摘要和 cron/worker secret。
-5. 部署后验证 readiness、邀请邮件、风险 OTP、头像上传/读取、OIDC `picture`、Directory `picture` 和 `user.profile.changed` webhook。
+4. `DEPLOYMENT_MODE=official`、`MAIL_ENABLED=true`、`MAIL_TRANSPORT=http`，并配置邮件 API；同时配置独立的会话、摘要和 worker secret。
+5. Vercel Pro 可直接配置每分钟 Cron。Hobby 不支持该频率，必须部署 `infrastructure/cloudflare-outbox-scheduler`，将同一 `OUTBOX_WORKER_SECRET` 作为 Cloudflare Worker secret 注入，并保持 `* * * * *` Cron Trigger。
+6. 部署后验证 readiness、邀请邮件、风险 OTP、头像上传/读取、OIDC `picture`、Directory `picture` 和 `user.profile.changed` webhook。
 
 正式验收必须记录实际 deployment URL、migration 结果、R2 对象元数据、邮件 provider 接收结果和完整 OIDC smoke；不能用本地构建替代。
+
+### Vercel Hobby 的 Cloudflare 调度器
+
+`vercel.json` 不登记 Cron，以免 Hobby 部署因每分钟计划被拒绝。Cloudflare Worker 配置位于 `infrastructure/cloudflare-outbox-scheduler/wrangler.jsonc`，生产域名固定为 `https://auth.hsfz.live`。部署 Worker 前先在 Vercel 设置至少 32 字符的 `OUTBOX_WORKER_SECRET`，再把完全相同的值通过 Cloudflare secret 管理注入 Worker；不得把值写入 Wrangler 配置、命令参数、日志或仓库。
+
+Worker 只向 `/api/internal/outbox/dispatch` 发送带 Bearer 鉴权的 HTTPS `POST`。非 2xx 响应只记录状态码并让本次 Cron 失败，不读取响应正文，也不会输出 secret。Cron Trigger 变更可能需要数分钟传播；验收时应检查 Cloudflare invocation 成功以及应用 outbox 状态，而不能只确认 Worker 已部署。
 
 ## 自部署检查
 

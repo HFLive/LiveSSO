@@ -133,11 +133,13 @@ Phase 4 已完成以下内部应用路径：
 
 尚未完成：
 
-- 当前机器没有 Vercel、托管 PostgreSQL、R2 和生产邮件 API 的授权配置，无法执行真实官方部署、邮件接收和 R2 对象验收。Phase 5 仍为进行中，获得凭据后须按 Phase 5 参考清单完成并记录证据。
+- Vercel Hobby 项目、生产环境变量、数据库 migration、固定域名和 Cloudflare 外部调度器尚未部署。
+- Neon 新加坡数据库、私有 R2 bucket 及 bucket 级对象读写凭据、Resend 已验证邮件域名及发送专用 API key 已由管理员创建并安全保存；仍须通过真实部署验证连接、邮件接收和 R2 对象读写。
 
 ## 已知限制与注意事项
 
 - 官方环境尚未验收，不能将本地构建或 MinIO 结果表述为 Vercel/R2 生产通过。
+- Vercel Hobby 不支持每分钟原生 Cron；官方 Hobby 部署必须使用仓库内 Cloudflare Worker Cron，且 Vercel 与 Worker 注入相同的独立 `OUTBOX_WORKER_SECRET`。
 - 自部署关闭邮件时邀请/恢复不可用，风险登录明确降级为密码登录并记录审计；官方生产禁止关闭邮件。
 - 普通登录用户的 OAuth client 管理权限仍默认全部拒绝；所有 client 变更必须走平台管理员控制面。
 - 仓库默认分支为 `main`；后续改动使用独立分支和 Draft PR。私有 Free 仓库暂不能启用 branch protection/ruleset，需依赖 CODEOWNERS 与人工评审约定。
