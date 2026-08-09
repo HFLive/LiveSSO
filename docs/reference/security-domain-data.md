@@ -7,7 +7,7 @@
 
 ## 管理员权限
 
-`User.platformRole` 只有 `USER | ADMIN`。新用户固定默认为 `USER`，OIDC JIT、邀请消费或接入应用角色都不得隐式提升为 `ADMIN`。
+`User.platformRole` 只有 `USER | ADMIN`。新用户固定默认为 `USER`，OIDC JIT、邀请消费或接入应用角色都不得隐式提升为 `ADMIN`。唯一例外是空数据库 bootstrap 命令：它以 PostgreSQL advisory lock 串行化检查，创建首个 `ADMIN` 并写入 `platform.admin.bootstrap` SYSTEM 审计；数据库已有任何用户后永久拒绝再次 bootstrap。
 
 角色变更必须调用数据层的 `setPlatformRole`：事务会锁定 actor 用户，只有当前 `ADMIN` 能修改角色，并为成功或拒绝结果写入 `platform.role.change` 审计事件。应用角色仍由接入应用管理，不进入该字段或 OIDC token。
 

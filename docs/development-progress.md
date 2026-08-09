@@ -133,9 +133,10 @@ Phase 4 已完成以下内部应用路径：
 
 尚未完成：
 
-- Vercel Hobby 项目已从个人私有 fork 创建，生产环境变量已配置，Neon 的 6 个 migration 已成功应用；首次构建在 Vercel 收集 standalone tracing 产物时失败，双部署产物修复与重新部署尚待完成。
-- Neon 新加坡数据库、私有 R2 bucket 及 bucket 级对象读写凭据、Resend 已验证邮件域名及发送专用 API key 已由管理员创建并安全保存；仍须通过成功部署验证连接、邮件接收和 R2 对象读写。
-- 固定域名和 Cloudflare 外部调度器尚未部署。
+- Vercel Hobby 项目已从个人私有 fork 创建并成功部署，`auth.hsfz.live` 已绑定；health、Neon readiness、`hkg1`、OIDC discovery/issuer 与 Ed25519 JWKS 已通过正式域名只读验收。
+- Neon 的 6 个 migration 已成功应用；私有 R2 bucket、bucket 级对象读写凭据、Resend 已验证邮件域名及发送专用 API key 已配置，仍须验证真实邮件接收和 R2 对象读写。
+- Cloudflare 外部调度器尚未部署。
+- 生产 bootstrap 尚未执行；当前脚本在 Phase 2 角色模型加入后未显式创建 `ADMIN`，修复和验证完成前不得写入首个生产用户。
 
 ## 已知限制与注意事项
 

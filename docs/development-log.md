@@ -311,6 +311,35 @@
 
 - 修复合并并同步个人 fork 后重新部署，记录 deployment URL 与 readiness。
 
+## 2026-08-09 — 初始平台管理员闭环
+
+### 目标
+
+- 修复角色模型加入后 bootstrap 用户仍继承默认 `USER`、导致空生产实例没有任何管理员的阻塞缺陷。
+
+### 实现
+
+- 将空数据库 bootstrap 明确为唯一初始 `ADMIN` 创建路径；邀请、JIT 和普通用户默认角色不变。
+- 使用 PostgreSQL transaction advisory lock 串行化“空数据库”检查，防止两个初始化进程并发创建多个管理员。
+- 在同一事务写入 `platform.admin.bootstrap` SYSTEM/CRITICAL 审计，保留 400 天；成功日志不再输出用户名或邮箱。
+- 更新初始化说明、Phase 2 角色不变量和 Phase 5 当前状态。
+
+### 关键决定或问题
+
+- 正式域名、readiness、OIDC discovery 和 JWKS 已通过真实生产只读检查，但在此修复合并前不会创建生产用户。
+
+### 验证
+
+- 新增 2 个单元测试，覆盖 advisory lock 先于空库检查、显式 `ADMIN`、SYSTEM/CRITICAL 审计和已有用户拒绝；`pnpm validate` 全部通过，共 16 个常规测试成功。
+- 在独立临时 PostgreSQL 数据库应用 6 个 migration 后执行真实 bootstrap，验证结果为 `ADMIN|platform.admin.bootstrap|SYSTEM|CRITICAL`；第二次执行按设计失败，临时数据库已删除。
+- 首次临时验证发现 Prisma 7 driver adapter 不能反序列化 advisory lock 的 `void` 返回列；查询改为保留锁副作用但只返回整数后再次完整验证通过，失败尝试未写入用户。
+- Vercel managed-output 与 self-hosted standalone 两类生产构建均通过，20 个页面/路由完成生成。
+- GitHub CI 待验证。
+
+### 遗留事项
+
+- 修复合并后仅在确认生产 `user` 表为空时执行一次 bootstrap，并验证管理员登录与审计记录。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

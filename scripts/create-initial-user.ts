@@ -2,6 +2,7 @@ import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "../src/lib/prisma";
+import { createInitialAdmin } from "../src/lib/security/bootstrap-admin";
 
 const email = process.env.BOOTSTRAP_EMAIL?.trim().toLowerCase();
 const username = process.env.BOOTSTRAP_USERNAME?.trim().toLowerCase();
@@ -22,32 +23,10 @@ if (password.length < 12 || password.length > 128) {
   throw new Error("BOOTSTRAP_PASSWORD must be between 12 and 128 characters.");
 }
 
-const existingUsers = await prisma.user.count();
-
-if (existingUsers > 0) {
-  throw new Error("Initial user creation is locked because the database already contains a user.");
-}
-
 const userId = randomUUID();
 const passwordHash = await hashPassword(password);
 
-await prisma.user.create({
-  data: {
-    id: userId,
-    name,
-    email,
-    emailVerified: true,
-    username,
-    displayUsername: username,
-    accounts: {
-      create: {
-        accountId: userId,
-        providerId: "credential",
-        password: passwordHash,
-      },
-    },
-  },
-});
+await createInitialAdmin(prisma, { id: userId, name, email, username, passwordHash });
 
-console.info(`Created initial HFLive Auth user: ${username} <${email}>`);
+console.info("Created the initial HFLive Auth administrator.");
 await prisma.$disconnect();

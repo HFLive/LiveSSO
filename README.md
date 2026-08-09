@@ -36,7 +36,7 @@ pnpm dev
 
 仓库内 `.env` 只含本地开发凭据并被 Git 忽略。部署时从 `.env.example` 配置真实秘密；不得复用开发 secret。所有生产部署必须分别设置不同的 `BETTER_AUTH_SECRET` 和 `SECURITY_HASH_SECRET`。
 
-首次启动且数据库中还没有任何用户时，可以创建唯一的初始用户：
+首次启动且数据库中还没有任何用户时，可以创建唯一的初始平台管理员：
 
 ```bash
 BOOTSTRAP_EMAIL=you@example.com \
@@ -46,7 +46,7 @@ BOOTSTRAP_PASSWORD='use-a-long-random-password' \
 pnpm user:create-initial
 ```
 
-该命令在数据库已有任意用户后会拒绝运行；后续账号必须走管理员邀请流程。
+该命令在事务内取得 PostgreSQL advisory lock，只允许空数据库创建一个 `ADMIN`，并写入 `platform.admin.bootstrap` SYSTEM 审计。数据库已有任意用户后会拒绝运行；后续账号必须走管理员邀请流程且默认保持 `USER`。
 
 仓库还提供 `pnpm oidc:smoke`，用于对已登记的本地测试客户端执行完整 authorization code + PKCE、consent、token 和 ID token claim 验证。它要求通过 `OIDC_SMOKE_*` 环境变量传入测试账号与客户端凭据，凭据不会写入仓库。`pnpm test:phase3`、`pnpm test:phase4` 与 `pnpm test:phase5` 分别验证邀请/风险登录、内部应用/事件和真实 PostgreSQL + MinIO 头像路径。
 

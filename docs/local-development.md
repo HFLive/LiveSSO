@@ -43,7 +43,7 @@ MAIL_SMTP_PORT=51025
 
 ## 创建第一个本地用户
 
-仅当数据库没有任何用户时运行：
+仅当数据库没有任何用户时运行，用于创建唯一的初始平台管理员：
 
 ```bash
 BOOTSTRAP_EMAIL=you@example.com \
@@ -53,7 +53,7 @@ BOOTSTRAP_PASSWORD='use-a-long-random-password' \
 pnpm user:create-initial
 ```
 
-数据库已有用户时脚本会拒绝执行。正式的后续账号创建将在邀请流程中实现。
+脚本使用 PostgreSQL advisory lock 串行化空库检查，显式创建 `ADMIN` 并写入 SYSTEM 审计。数据库已有用户时脚本会拒绝执行；正式的后续账号必须通过管理员邀请创建，并保持默认 `USER`。
 
 ## 常规验证
 
