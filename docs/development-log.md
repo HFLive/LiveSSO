@@ -424,6 +424,37 @@
 - 创建正式接入 client，运行 authorization code + PKCE OIDC smoke，验证 OIDC/Directory `picture` 与 `user.profile.changed` webhook。
 - 使用真实成员邮箱验收邀请邮件与接受流程；不在生产创建 disposable 测试账号。
 
+## 2026-08-09 — EdgeOne 可选静态资源分发
+
+### 目标
+
+- 参考 LiveBoard 的静态资源发布边界，把 Next.js 内容哈希资源作为可选路径发布到 EdgeOne，同时保持认证和用户数据仍由原有 Vercel/R2 链路提供。
+
+### 实现
+
+- 新增 `vercel | edgeone` 静态资源 provider 配置；默认 `vercel`，EdgeOne origin 只接受无凭据、路径、查询或 fragment 的 HTTPS origin。
+- Next.js 使用受校验的 `assetPrefix`；Production postbuild 只暂存 `.next/static` 并通过固定版本 EdgeOne Makers CLI 上传到 `overseas` 项目。
+- 上传内容设置 immutable/CORS 响应头；脚本从公开 origin 回读代表性资源，验证 HTTP、JavaScript MIME 与精确字节，失败时阻止 Production 部署。
+- 增加环境变量示例、配置单元测试，以及未备案区域限制、启用、验收和一键回滚文档。
+
+### 关键决定或问题
+
+- `hsfz.live` 未备案，不能使用 EdgeOne 中国大陆或全球可用区；实现固定为 `overseas`，不把该能力描述为确定的中国大陆加速。
+- EdgeOne 只接收公开 `/_next/static/*`。HTML、API、认证 cookie/token、头像和私有 R2 对象均不迁移。
+- 上传只在 Vercel Production 执行；Preview、本地和 Docker 构建无外部副作用。默认 provider 不改变现有生产部署。
+
+### 验证
+
+- `pnpm validate` 通过：Lint、类型检查及 22 个常规测试成功，15 个需外部服务的测试按条件跳过。
+- Vercel managed-output 构建通过，20 个页面/路由生成完成；静态 HTML/RSC 已引用测试 EdgeOne origin，server tracing 清单存在且 `.next/standalone` 不存在。
+- self-hosted standalone 构建使用非生产 build-only 占位值通过；standalone server 与 tracing 清单均存在，产物不包含测试 EdgeOne origin。
+- Production 默认 `vercel` 路径确认跳过上传；选择 `edgeone` 但缺少 token 时确认以非零状态拒绝构建。
+
+### 遗留事项
+
+- 创建真实 EdgeOne Makers `overseas` 项目、绑定静态域名并在 Vercel Production 注入 token 后完成首次真实上传和公开回读。
+- 分别进行中国大陆与境外网络测量，再决定是否长期启用；若结果不佳则切回 `STATIC_ASSET_PROVIDER=vercel`。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

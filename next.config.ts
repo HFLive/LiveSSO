@@ -1,11 +1,14 @@
 import type { NextConfig } from "next";
+import { resolveStaticAssetConfig } from "./scripts/static-assets-config";
 
 const usesVercelManagedOutput = process.env.VERCEL === "1" || process.env.DEPLOYMENT_MODE === "official";
+const { assetPrefix } = resolveStaticAssetConfig();
 
 const nextConfig: NextConfig = {
   agentRules: false,
   output: usesVercelManagedOutput ? undefined : "standalone",
   poweredByHeader: false,
+  assetPrefix,
   experimental: {
     typedEnv: true,
   },

@@ -41,6 +41,8 @@ MAIL_SMTP_PORT=51025
 
 生产 HTTP 邮件供应商使用 `MAIL_TRANSPORT=http`、`MAIL_API_URL` 和可选 `MAIL_API_TOKEN`。自部署关闭邮件会同时关闭邀请与找回密码，并让风险登录以可审计的降级方式继续；官方生产不允许该降级。
 
+静态资源默认继续由 Next.js/Vercel 提供（`STATIC_ASSET_PROVIDER=vercel`）。可选 EdgeOne 上传只在 `VERCEL=1` 且 `VERCEL_ENV=production` 的构建完成后执行；本地、Preview 和 Docker 构建不会访问 EdgeOne。完整变量、未备案区域限制、验证与回滚步骤见 [Phase 5 部署参考](./reference/phase5-profile-deployment.md#edgeone-可选静态资源分发)。
+
 ## 创建第一个本地用户
 
 仅当数据库没有任何用户时运行，用于创建唯一的初始平台管理员：

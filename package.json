@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "WATCHPACK_POLLING=true next dev",
     "build": "prisma generate && next build",
+    "postbuild": "tsx scripts/deploy-static-assets.ts",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "prisma generate && tsc --noEmit",

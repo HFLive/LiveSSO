@@ -138,16 +138,19 @@ Phase 4 已完成以下内部应用路径：
 - 初始管理员已成功 bootstrap；历史无效邮箱已由受限命令修复，旧 challenge 已取消，Resend 新设备 OTP、会话、`ADMIN` 权限和管理控制台均通过真实登录验收。
 - 私有 R2 bucket 已通过真实头像上传、应用读取和刷新后持久化验收。
 - Cloudflare `hflive-auth-outbox-scheduler` 已部署 `* * * * *` Cron；secret 轮换后版本 `f4053126-4dd4-4c32-a55a-d2d3cf826a3a` 的真实 scheduled invocation 为 `outcome: ok`。
+- EdgeOne 可选静态资源分发已实现：仅在 Vercel Production 上传 `/_next/static/*`，上传后校验公开文件的 MIME 与精确字节；默认仍使用 Vercel，生产启用和真实网络测速待完成。
 
 仍待完成：
 
 - 以正式接入 client 运行完整 authorization code + PKCE OIDC smoke，并验证 OIDC/Directory `picture`。
 - 创建真实成员邀请以验收邀请邮件与接受流程，并用订阅 client 验证 `user.profile.changed` webhook 的投递状态。
+- 创建 EdgeOne Makers `overseas` 项目并绑定静态域名，注入 Production-only token 后完成真实部署；分别记录中国大陆与境外网络结果，不因使用 EdgeOne 自动宣称大陆加速。
 
 ## 已知限制与注意事项
 
 - 官方核心基础设施、管理员登录、风险 OTP 与 R2 头像链路已验收；正式 client 的 OIDC/Directory/webhook 和成员邀请链路仍不能表述为生产通过。
 - Vercel Hobby 不支持每分钟原生 Cron；官方 Hobby 部署必须使用仓库内 Cloudflare Worker Cron，且 Vercel 与 Worker 注入相同的独立 `OUTBOX_WORKER_SECRET`。
+- `hsfz.live` 未备案时 EdgeOne 只能选择 `overseas`，不能使用中国大陆节点；静态分发不承诺中国大陆访问速度。
 - 自部署关闭邮件时邀请/恢复不可用，风险登录明确降级为密码登录并记录审计；官方生产禁止关闭邮件。
 - 普通登录用户的 OAuth client 管理权限仍默认全部拒绝；所有 client 变更必须走平台管理员控制面。
 - 仓库默认分支为 `main`；后续改动使用独立分支和 Draft PR。私有 Free 仓库暂不能启用 branch protection/ruleset，需依赖 CODEOWNERS 与人工评审约定。

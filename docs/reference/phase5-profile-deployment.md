@@ -40,6 +40,27 @@
 
 Vercel 使用框架集成生成函数产物，`DEPLOYMENT_MODE=official` 或平台 `VERCEL=1` 时不启用 Next.js `output: "standalone"`。Docker/self-hosted 构建继续生成 `.next/standalone`，供 Dockerfile 的 runner stage 使用。两种产物不能在部署配置中混用。
 
+### EdgeOne 可选静态资源分发
+
+官方 Vercel 部署可选择把本次 Next.js 构建生成的公开 `/_next/static/*` 上传到 EdgeOne Pages Makers。HTML、认证/API 请求、头像与其他 R2 对象仍由 `auth.hsfz.live`、Vercel 和私有 R2 提供；EdgeOne 不接触 cookie、token、用户资料或服务端响应。
+
+| 变量 | 说明 |
+| --- | --- |
+| `STATIC_ASSET_PROVIDER` | 默认 `vercel`；启用时设为 `edgeone` |
+| `EDGEONE_ASSET_ORIGIN` | 已绑定到 Makers 项目的独立 HTTPS origin，例如 `https://static-auth.hsfz.live` |
+| `EDGEONE_PROJECT_NAME` | Makers 项目名；默认 `hflive-auth-static-eo` |
+| `EDGEONE_API_TOKEN` | 仅用于 Production 构建上传的敏感 token，不得写入仓库或日志 |
+
+启用步骤：
+
+1. 在 EdgeOne Pages 创建 Direct Upload/Makers 项目 `hflive-auth-static-eo`，区域选择 `overseas`，再绑定独立静态域名。
+2. 先保持 `STATIC_ASSET_PROVIDER=vercel`，确认静态域名证书和 DNS 可用；随后在 Vercel Production 环境添加 origin、项目名和敏感 token。
+3. 将 `STATIC_ASSET_PROVIDER` 切换为 `edgeone` 并触发 Production redeploy。Preview 和本地构建不会上传。
+4. 构建脚本只复制 `.next/static`，为哈希资源设置一年 immutable cache 与跨源读取头，上传后从配置的公开 origin 回读文件，并校验 HTTP 状态、JavaScript MIME 和精确字节。上传或校验失败会让 Production 构建失败，避免 HTML 引用尚未可用的资源。
+5. 验收页面 HTML 中的 `/_next/static/` URL 已使用静态 origin，并分别从中国大陆网络和境外网络记录首字节、完整加载、失败率及回源情况。没有真实网络测量时不得宣称大陆访问已提速。
+
+`hsfz.live` 当前没有中国大陆 ICP 备案，因此项目必须固定使用 `overseas`，不能启用中国大陆或全球可用区，也不能把该路径描述为“中国大陆 CDN”。它可能改善跨境路由和缓存命中，但不保证中国大陆访问速度。回滚只需把 `STATIC_ASSET_PROVIDER` 改回 `vercel` 并重新部署；已上传的内容哈希资源不含秘密，可以在确认新部署不再引用后按 EdgeOne 保留策略清理。
+
 ### Vercel Hobby 的 Cloudflare 调度器
 
 `vercel.json` 不登记 Cron，以免 Hobby 部署因每分钟计划被拒绝。Cloudflare Worker 配置位于 `infrastructure/cloudflare-outbox-scheduler/wrangler.jsonc`，生产域名固定为 `https://auth.hsfz.live`。部署 Worker 前先在 Vercel 设置至少 32 字符的 `OUTBOX_WORKER_SECRET`，再把完全相同的值通过 Cloudflare secret 管理注入 Worker；不得把值写入 Wrangler 配置、命令参数、日志或仓库。
