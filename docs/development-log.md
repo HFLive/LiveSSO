@@ -205,7 +205,7 @@
 ### 实现
 
 - 增加 `validate-and-build`、`integration`、`container-build` 三个 GitHub Actions job；工作流只有 contents read 权限。
-- 仅使用 GitHub 官方 `checkout` 与 `setup-node` Action，并固定完整 commit SHA；pnpm 由 Corepack 锁定到 11.7.0。
+- 仅使用 GitHub 官方 `checkout` 与 `setup-node` v7 Action，并固定完整 commit SHA；pnpm 由 Corepack 锁定到 11.7.0。
 - 集成 job 使用 disposable PostgreSQL、MinIO、Mailpit 和 volume，应用正式 migration 后运行 Phase 2–5 专项。
 - 增加 pnpm/GitHub Actions 每周 Dependabot 更新、CODEOWNERS、中文 PR 模板和私密漏洞报告策略。
 - README 增加 CI 状态和安全入口；开发文档同步仓库、CI 与私有 Free 分支保护限制。
@@ -215,7 +215,9 @@
 - CI 与 Dependabot YAML 可由本地 YAML parser 读取；Compose 配置校验通过，`minio-init` 实际退出 0。
 - `pnpm validate`：11 项普通测试通过，专项按开关跳过。
 - 生产构建通过，20 个 Next.js 路由完成生成。
-- GitHub-hosted runner 结果将在 Draft PR 创建后核验，不以本地结果替代远端 CI。
+- Draft PR #1 首轮 GitHub Actions 中，`validate-and-build` 与 `container-build` 通过；`integration` 因全新 runner 未生成 Prisma Client 而失败。
+- 已在集成任务安装依赖后增加 `pnpm db:generate`，并把两个官方 Action 更新到当前 v7 稳定版本的完整 SHA。
+- 修正后本地 Prisma Client 生成、YAML 解析、Compose 配置及 Phase 2–5 四组真实集成测试全部通过；第二轮 GitHub-hosted runner 结果将在推送后核验。
 
 ### 遗留事项
 
