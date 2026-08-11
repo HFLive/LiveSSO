@@ -11,7 +11,8 @@ export function InvitationAdminForm() {
   }, [message]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setPending(true); setMessage(undefined); setError(undefined);
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
       const response = await fetch("/api/invitations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), username: data.get("username"), expiresIn: data.get("expiresIn") }) });
       const result = await response.json().catch(() => ({})) as { error?: string; expiresIn?: InvitationDuration };
@@ -19,7 +20,7 @@ export function InvitationAdminForm() {
         setError(invitationErrorMessage(result.error));
         return;
       }
-      event.currentTarget.reset(); setMessage(`邀请已发送，有效期 ${result.expiresIn ? INVITATION_DURATIONS[result.expiresIn].label : "已设置"}。`);
+      form.reset(); setMessage(`邀请已发送，有效期 ${result.expiresIn ? INVITATION_DURATIONS[result.expiresIn].label : "已设置"}。`);
     } catch {
       setError("无法连接邀请服务，请检查网络后重试。");
     } finally {
