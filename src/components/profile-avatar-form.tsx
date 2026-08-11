@@ -2,10 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
+import Link from "next/link";
 
 const OUTPUT_SIZE = 512;
 
-export function ProfileAvatarForm({ initialPicture, storageEnabled, returnTo }: { initialPicture: string | null; storageEnabled: boolean; returnTo?: string }) {
+type ProfileDetails = {
+  name: string;
+  username: string | null;
+  email: string;
+  emailVerified: boolean;
+  platformRole: "USER" | "ADMIN";
+  createdAt: string;
+};
+
+export function ProfileAvatarForm({
+  profile,
+  initialPicture,
+  storageEnabled,
+  returnTo,
+}: {
+  profile: ProfileDetails;
+  initialPicture: string | null;
+  storageEnabled: boolean;
+  returnTo?: string;
+}) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -88,13 +108,47 @@ export function ProfileAvatarForm({ initialPicture, storageEnabled, returnTo }: 
     }
   }
 
-  return <section className="profile-grid">
-    <div className="panel profile-summary">
-      <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">HF</span>}</div>
-      <div><p className="eyebrow">统一资料</p><h1 className="profile-title">你的头像</h1><p className="auth-copy">在这里更新头像，已连接的 HFLive 应用会使用最新版本。</p></div>
+  return <section className="profile-page">
+    <header className="profile-page-header">
+      <Link className="brand" href="/">
+        <span className="brand-mark" aria-hidden="true" />
+        HFLive Auth
+      </Link>
+      <Link className="secondary-link" href="/">返回首页</Link>
+    </header>
+
+    <div className="panel profile-hero">
+      <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{profile.name.slice(0, 1).toUpperCase()}</span>}</div>
+      <div className="profile-hero-copy">
+        <p className="eyebrow">个人资料</p>
+        <h1 className="profile-title">{profile.name}</h1>
+        <p className="profile-handle">@{profile.username ?? "未设置用户名"}</p>
+        <p className="auth-copy">这些资料用于 HFLive Auth 和已连接的组织应用。</p>
+      </div>
+      <span className="account-status">账号正常</span>
     </div>
-    <div className="panel crop-panel">
-      <h2>上传并裁切</h2>
+
+    <div className="profile-grid">
+      <div className="panel profile-details">
+        <div className="section-heading">
+          <div><p className="eyebrow">基本资料</p><h2>账号信息</h2></div>
+          <span className="quiet-badge">集中管理</span>
+        </div>
+        <dl className="profile-data-list">
+          <div><dt>显示名</dt><dd>{profile.name}</dd></div>
+          <div><dt>用户名</dt><dd>{profile.username ?? "未设置"}</dd></div>
+          <div><dt>邮箱</dt><dd>{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></dd></div>
+          <div><dt>账号类型</dt><dd>{profile.platformRole === "ADMIN" ? "管理员" : "成员"}</dd></div>
+          <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
+        </dl>
+        <p className="fine-print">显示名、用户名和邮箱目前由管理员维护。头像可由你自行更新。</p>
+      </div>
+
+      <div className="panel crop-panel">
+        <div className="section-heading">
+          <div><p className="eyebrow">头像</p><h2>更换个人头像</h2></div>
+          <span className="quiet-badge editable">可编辑</span>
+        </div>
       {!storageEnabled ? <p className="form-error" role="alert">当前自部署实例未启用对象存储，头像功能不可用。</p> : <>
         <label className="file-picker">选择图片<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => selectFile(event.target.files?.[0])} /></label>
         <canvas ref={canvasRef} width={OUTPUT_SIZE} height={OUTPUT_SIZE} className={`crop-canvas${ready ? " ready" : ""}`} aria-label="头像裁切预览" />
@@ -107,6 +161,7 @@ export function ProfileAvatarForm({ initialPicture, storageEnabled, returnTo }: 
       </>}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {message ? <p className="form-success" role="status">{message}</p> : null}
+      </div>
     </div>
   </section>;
 }

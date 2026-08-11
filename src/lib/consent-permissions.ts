@@ -10,8 +10,8 @@ export function describeConsentPermissions(scopes: string[]): ConsentPermission[
 
   if (requested.has("openid") || basicFields.length) {
     permissions.push({
-      title: "使用你的 HFLive 账号登录",
-      description: basicFields.length ? `查看你的${basicFields.join("，以及")}` : "确认这是你的 HFLive 账号",
+      title: "使用你的 HFLive Auth 账号登录",
+      description: basicFields.length ? `查看你的${basicFields.join("，以及")}` : "确认这是你的 HFLive Auth 账号",
     });
   }
 
@@ -23,7 +23,7 @@ export function describeConsentPermissions(scopes: string[]): ConsentPermission[
   }
 
   if (!permissions.length) {
-    permissions.push({ title: "连接你的 HFLive 账号", description: "完成此应用所需的账号授权" });
+    permissions.push({ title: "连接你的 HFLive Auth 账号", description: "完成此应用所需的账号授权" });
   }
 
   return permissions;

@@ -45,6 +45,6 @@ export async function sendSecurityNotice(to: string, summary: string) {
   await sendTransactionalMail({
     to,
     subject: "HFLive Auth 安全提醒",
-    text: `${summary}\n\n如果这不是你的操作，请立即联系 HFLive 管理员并重置密码。`,
+    text: `${summary}\n\n如果这不是你的操作，请立即联系 HFLive Auth 管理员并重置密码。`,
   });
 }

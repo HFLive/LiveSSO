@@ -39,7 +39,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       await sendTransactionalMail({
         to: user.email,
-        subject: "重置你的 HFLive 密码",
+        subject: "重置你的 HFLive Auth 密码",
         text: `请在 1 小时内打开以下链接重置密码：\n${url}\n\n如果不是你发起的请求，请忽略这封邮件。`,
       });
     },

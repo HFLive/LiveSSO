@@ -42,7 +42,7 @@ export function AdminConsole({ initialClients, initialUsers, initialEvents }: { 
     setClients((current) => current.map((client) => client.clientId === clientId ? { ...client, redirectUris, scopes } : client));
   }
   return <main className="admin-shell">
-    <header className="admin-header"><div><p className="eyebrow">HFLive control plane</p><h1 className="admin-title">内部应用管理</h1></div><a href="/admin/invitations" className="secondary-link">邀请成员</a></header>
+    <header className="admin-header"><div><p className="eyebrow">HFLive Auth 管理控制台</p><h1 className="admin-title">内部应用管理</h1></div><a href="/admin/invitations" className="secondary-link">邀请成员</a></header>
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     {credential ? <section className="secret-panel" role="status"><strong>请立即保存，仅显示一次</strong><code>client_id: {credential.clientId}</code><code>client_secret: {credential.clientSecret}</code>{credential.webhookSecret ? <code>webhook_secret: {credential.webhookSecret}</code> : null}<button className="secondary-button" onClick={() => setCredential(undefined)}>我已保存</button></section> : null}
     <section className="admin-grid">

@@ -15,6 +15,7 @@ suite("Phase 3 credential and risk login integration", () => {
   let userId: string;
   let invitedUserId: string | undefined;
   let assignedInvitationId: string | undefined;
+  const reusableInvitationIds: string[] = [];
 
   beforeAll(async () => {
     await import("dotenv/config");
@@ -40,6 +41,9 @@ suite("Phase 3 credential and risk login integration", () => {
     if (!database) return;
     if (assignedInvitationId) {
       await database.invitation.deleteMany({ where: { id: assignedInvitationId } });
+    }
+    if (reusableInvitationIds.length) {
+      await database.invitation.deleteMany({ where: { id: { in: reusableInvitationIds } } });
     }
     if (invitedUserId) {
       await database.user.deleteMany({ where: { id: invitedUserId } });
@@ -161,6 +165,38 @@ suite("Phase 3 credential and risk login integration", () => {
     invitedUserId = created.id;
     expect(created.username).toBe(assignedUsername.toLowerCase());
     expect(created.displayUsername).toBe(assignedUsername);
+  });
+
+  it("releases an unaccepted username after its invitation expires", async () => {
+    const { expireStaleInvitations } = await import("./domain-store");
+    const reusableUsername = `Reusable_${runId.replaceAll("-", "").slice(0, 16)}`;
+    const expired = await database.invitation.create({
+      data: {
+        email: `expired-${runId}@example.invalid`,
+        normalizedEmail: `expired-${runId}@example.invalid`,
+        username: reusableUsername,
+        tokenDigest: digest("invitation-token", `expired-${runId}`, secret),
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1_000),
+        expiresAt: new Date(Date.now() - 60 * 60 * 1_000),
+      },
+    });
+    reusableInvitationIds.push(expired.id);
+
+    expect(await expireStaleInvitations(database)).toBeGreaterThanOrEqual(1);
+    expect(
+      await database.invitation.findUniqueOrThrow({ where: { id: expired.id } }),
+    ).toMatchObject({ status: "EXPIRED" });
+
+    const replacement = await database.invitation.create({
+      data: {
+        email: `replacement-${runId}@example.invalid`,
+        normalizedEmail: `replacement-${runId}@example.invalid`,
+        username: reusableUsername.toLowerCase(),
+        tokenDigest: digest("invitation-token", `replacement-${runId}`, secret),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    reusableInvitationIds.push(replacement.id);
   });
 
   it("keeps unknown-account and wrong-password responses indistinguishable", async () => {

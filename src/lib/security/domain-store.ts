@@ -86,6 +86,18 @@ export async function consumeInvitation(
   return result.count === 1;
 }
 
+export async function expireStaleInvitations(
+  database: DatabaseClient,
+  now = new Date(),
+) {
+  const result = await database.invitation.updateMany({
+    where: { status: "PENDING", expiresAt: { lte: now } },
+    data: { status: "EXPIRED" },
+  });
+
+  return result.count;
+}
+
 export async function consumeLoginChallenge(
   database: DatabaseClient,
   input: { id: string; bindingDigest: string; otpDigest: string; now?: Date },

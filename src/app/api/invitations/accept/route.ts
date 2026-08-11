@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       });
       return created;
     });
-    await sendSecurityNotice(user.email, "你的 HFLive 账号已通过邀请创建。" ).catch(() => undefined);
+    await sendSecurityNotice(user.email, "你的 HFLive Auth 账号已通过邀请创建。" ).catch(() => undefined);
     return NextResponse.json({ status: true });
   } catch {
     return NextResponse.json({ error: "INVITATION_INVALID" }, { status: 400 });

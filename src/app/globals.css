@@ -37,7 +37,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -88,16 +89,19 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+  color: var(--text);
   font-weight: 650;
   letter-spacing: -0.02em;
+  text-decoration: none;
 }
 
 .brand-mark {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 22px rgba(157, 245, 173, 0.72);
+  width: 22px;
+  height: 22px;
+  background: var(--text);
+  filter: drop-shadow(0 0 10px rgba(157, 245, 173, 0.25));
+  -webkit-mask: url("/icon.svg") center / contain no-repeat;
+  mask: url("/icon.svg") center / contain no-repeat;
 }
 
 .environment {
@@ -152,6 +156,62 @@ h1 {
 
 .hero-actions a {
   flex: 1;
+}
+
+.hero-actions .primary-button,
+.hero-actions .secondary-button {
+  margin-top: 0;
+}
+
+.signed-in-summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 26px;
+  padding: 10px 14px 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.signed-in-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 50%;
+  color: #071007;
+  background: var(--accent);
+  font-weight: 750;
+}
+
+.signed-in-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.signed-in-summary strong,
+.signed-in-summary small {
+  display: block;
+}
+
+.signed-in-summary strong {
+  font-size: 14px;
+}
+
+.signed-in-summary small {
+  max-width: min(460px, calc(100vw - 130px));
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel {
@@ -232,7 +292,8 @@ h1 {
   font-size: 13px;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   height: 46px;
   padding: 0 13px;
@@ -243,7 +304,8 @@ h1 {
   background: rgba(0, 0, 0, 0.24);
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   border-color: var(--line-strong);
   box-shadow: 0 0 0 3px rgba(157, 245, 173, 0.08);
 }
@@ -434,14 +496,29 @@ h1 {
   text-align: center;
 }
 
-.profile-shell { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0 88px; }
-.profile-grid { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(360px, 1.2fr); gap: 20px; align-items: start; }
-.profile-summary { display: grid; gap: 24px; }
-.profile-summary .eyebrow { margin-bottom: 12px; }
+.profile-shell { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 88px; }
+.profile-page { display: grid; gap: 20px; }
+.profile-page-header { display: flex; align-items: center; justify-content: space-between; min-height: 52px; margin-bottom: 6px; }
+.profile-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 28px; align-items: center; padding: 32px; }
+.profile-hero .eyebrow { margin-bottom: 10px; }
 .profile-title { font-size: clamp(34px, 6vw, 54px); }
 .avatar-frame { display: grid; width: 160px; height: 160px; overflow: hidden; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--accent); background: rgba(157,245,173,.08); font-size: 40px; }
 .avatar-frame img { width: 100%; height: 100%; object-fit: cover; }
-.crop-panel h2 { margin: 0 0 18px; font-size: 21px; }
+.profile-hero-copy .auth-copy { margin: 14px 0 0; }
+.profile-handle { margin: 7px 0 0; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 13px; }
+.account-status { align-self: start; padding: 7px 10px; color: var(--accent); border: 1px solid rgba(157,245,173,.2); border-radius: 999px; background: rgba(157,245,173,.07); font-size: 12px; }
+.profile-grid { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(390px, 1.15fr); gap: 20px; align-items: start; }
+.section-heading { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.section-heading .eyebrow { margin-bottom: 7px; }
+.section-heading h2 { margin: 0; font-size: 21px; }
+.quiet-badge { flex: 0 0 auto; padding: 5px 8px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; font-size: 11px; }
+.quiet-badge.editable { color: var(--accent); border-color: rgba(157,245,173,.2); background: rgba(157,245,173,.06); }
+.profile-data-list { margin: 0; }
+.profile-data-list > div { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.profile-data-list > div:first-child { padding-top: 2px; }
+.profile-data-list dt { color: var(--muted); font-size: 13px; }
+.profile-data-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 14px; }
+.profile-data-list dd small { display: inline-block; margin-left: 8px; padding: 2px 6px; color: var(--accent); border-radius: 999px; background: rgba(157,245,173,.07); font-size: 10px; }
 .file-picker { display: flex; min-height: 46px; padding: 0 14px; align-items: center; justify-content: center; border: 1px dashed var(--line-strong); border-radius: 10px; color: var(--accent); cursor: pointer; }
 .file-picker:focus-within { box-shadow: 0 0 0 3px rgba(157,245,173,.1); }
 .file-picker input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -452,7 +529,7 @@ h1 {
 .crop-controls input { width: 100%; accent-color: var(--accent); }
 
 @media (max-width: 760px) {
-  .profile-grid { grid-template-columns: 1fr; }.profile-shell { padding-top: 24px; }.crop-controls label { grid-template-columns: 1fr; gap: 5px; }
+  .profile-grid { grid-template-columns: 1fr; }.profile-shell { padding-top: 16px; }.profile-hero { grid-template-columns: 1fr; gap: 20px; }.profile-hero .avatar-frame { width: 112px; height: 112px; }.account-status { position: absolute; top: 20px; right: 20px; }.crop-controls label { grid-template-columns: 1fr; gap: 5px; }
   .admin-header { align-items: flex-start; flex-direction: column; }.admin-grid { grid-template-columns: 1fr; }.admin-item { grid-template-columns: 1fr; }.compact-actions { justify-content: flex-start; }.audit-row { grid-template-columns: 1fr; gap: 5px; }
   .hero {
     grid-template-columns: 1fr;
@@ -462,6 +539,10 @@ h1 {
 
   .hero-actions {
     max-width: none;
+  }
+
+  .hero-actions a {
+    min-width: 0;
   }
 
   h1 {
