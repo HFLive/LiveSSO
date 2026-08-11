@@ -674,6 +674,37 @@
   和 HFLive outbox 到生产 webhook 的真实投递证据。
 - Phase 8 尚未开始：不邀请/迁移真实成员，不批量建立映射，不切换官方默认入口。
 
+## 2026-08-11 — 正式 OIDC 回跳、邀请与统一头像体验修正
+
+### 目标
+
+- 修复 LiveBoard 登录完成后停留在 HFLive Auth 首页的问题，并补齐管理员邀请、consent 应用名称、头像修改返回体验。
+
+### 实现
+
+- 登录页识别原始和 Better Auth 恢复后的 OIDC authorize 参数，风险验证码完成后继续原授权请求。
+- 邀请由管理员预先指定用户名，pending 状态按大小写不敏感保留；接受端以服务端邀请记录为准，兼容历史邀请。发送成功使用页面顶部悬浮通知。
+- consent 只从已审批且启用的 client 读取应用名，并把登录 scopes 合并为普通用户可理解的账号资料用途，不显示内部 client ID 或 scope 名称。
+- 资料页 `returnTo` 只接受已审批 client 回调同源的 HTTPS 页面，移除 fragment；头像保存成功后自动返回，未授权目标被忽略。
+- 按相同的信息层级审查普通用户页面：首页改为登录/管理头像的明确入口；登录、邮箱验证、邀请、找回/重置密码、头像和错误页移除内部协议、安全实现术语，并为失效或退出路径提供清晰下一步。管理控制台保持原有高密度运维界面。
+
+### 关键决定或问题
+
+- `Invitation.username` 保持 nullable 只为兼容已有 pending 记录；新邀请 API 强制提供用户名，并由数据库部分唯一索引处理并发保留。
+- 回跳白名单来自 client 注册数据，不接受浏览器提供的应用名称或任意外部 URL，避免 consent 欺骗和开放重定向。
+- 授权文案参考 Google 对纯登录 scopes 整体同意的模式，以及 GitHub 强调应用名称和具体数据类型的做法；协议字段仍只在后台参与授权。
+
+### 验证
+
+- 新 migration 在现有 PostgreSQL 和空数据库均通过 `prisma migrate deploy`；`pnpm test:phase3` 6 项、`pnpm test:phase4` 5 项通过。
+- `pnpm validate` 通过 37 项单元测试（另 17 项按环境跳过），production build 与完整 authorization code + PKCE smoke 通过。
+- Edge 真实浏览器确认 consent 展示已审批应用名和普通用户文案，桌面宽度无横向溢出；恶意 `returnTo` 被丢弃并只返回本地 `/profile`。
+- Edge 逐页检查首页、登录、额外验证、找回/重置密码、邀请失效和错误页的标题、说明及返回路径；首页和 consent 桌面渲染正常，consent 430px 移动宽度无横向溢出且底部提示居中。
+
+### 遗留事项
+
+- 合并并部署后，使用正式 LiveBoard client 复验 OIDC 回跳、邀请通知/用户名、`LiveBoard Production` consent 名称、头像同步和保存后返回。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

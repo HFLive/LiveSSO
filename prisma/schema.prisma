@@ -104,6 +104,7 @@ model Invitation {
   id              String           @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
   email           String
   normalizedEmail String
+  username        String?          @db.VarChar(32)
   tokenDigest     String           @unique @db.VarChar(80)
   status          InvitationStatus @default(PENDING)
   grantedRole     PlatformRole     @default(USER)

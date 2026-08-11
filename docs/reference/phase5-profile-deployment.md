@@ -6,6 +6,7 @@
 ## 头像契约
 
 - 已登录且状态为 `ACTIVE` 的用户通过 `/profile` 管理头像；上传端点为 `POST /api/profile/avatar`。
+- 已批准应用可在资料页 URL 中携带 `returnTo`。服务端只接受与已审批、启用 client 的 redirect URI 同源的 HTTPS 页面，移除 fragment，并在头像保存成功后返回该页面；未批准目标会被忽略，避免开放重定向。
 - 浏览器提供居中裁切、缩放和横纵位置调整；服务端不信任客户端编码结果，会重新解码并输出 512×512 WebP。
 - 输入只接受 JPEG、PNG、WebP，原文件最大 8 MiB，任一边最大 8192 像素；解码失败、像素炸弹或错误格式统一拒绝。
 - 对象键使用 `avatars/{sub}/{uuid}.webp`，bucket 保持私有。应用通过 `GET /api/profile/avatar/{sub}?v={version}` 流式读取，不把对象存储凭据或临时签名 URL 暴露给浏览器。

@@ -1,8 +1,8 @@
 # 开发进度
 
 最后更新：2026-08-11
-当前阶段：Phase 7 LiveBoard 前端接入完成，等待 Phase 6 生产部署闭环后进入 Phase 8
-生产状态：HFLive Auth 核心平台已上线；LiveBoard 后端和前端本机真实 hybrid 联调通过，正式部署回调和生产 webhook 待验收
+当前阶段：Phase 6/7 生产接入稳定化，完成正式登录、邀请与统一头像体验后再进入 Phase 8
+生产状态：HFLive Auth 核心平台已上线；LiveBoard 正式 OIDC 已到达登录/consent，回跳、邀请和统一头像修复已完成本地验证，等待本次部署后的生产复验
 
 本文件是项目当前完成度和下一步的唯一动态状态页。总体阶段定义见 [实施方案](../IMPLEMENTATION_PLAN.md)，Phase 1 的完成时证据见 [历史验收快照](../PHASE_1_STATUS.md)。
 
@@ -23,12 +23,12 @@
 
 ## 当前可用能力
 
-- 管理员邮件邀请、首次设置密码和普通用户账号创建。
+- 管理员邮件邀请可指定全局用户名，成功后显示页面顶部通知；受邀用户首次设置显示名和密码。
 - 用户名或邮箱单输入框登录、可解释风险规则、邮箱 OTP 和 30 天受信设备。
 - 统一找回密码、单次 reset token、全会话撤销和安全提醒。
 - 禁止公开注册、禁止动态客户端注册。
 - OIDC discovery 与 authorization code + PKCE。
-- consent、access/id/refresh token、userinfo、introspection、revocation、end-session 基础端点。
+- consent 以已审批应用名称和普通用户可理解的数据用途展示，不暴露内部 client ID 或 scope 术语；access/id/refresh token、userinfo、introspection、revocation、end-session 基础端点可用。
 - PostgreSQL 持久化限流、会话、JWKS 和 OAuth 数据。
 - 根域 issuer 与 EdDSA JWKS 轮换配置。
 - 深色基础首页、登录页和 consent 页。
@@ -39,18 +39,19 @@
 - Directory API 使用 `client_credentials` 与 `directory:user:read | directory:user:status` 最小 scope。
 - 用户状态变化按订阅 client 生成独立 outbox，通过带时间戳 HMAC webhook 可靠投递。
 - `/profile` 支持头像选择、裁切与键盘调整，服务端规范化为 512×512 WebP 并写入 R2/MinIO。
+- 已审批应用可携带受控 `returnTo` 进入 `/profile`，头像保存后自动返回原应用页面；非白名单目标被忽略。
 - 头像使用同源版本化 URL，旧版本保留，更新会写审计并生成 `user.profile.changed` outbox。
 
 ## 最近验证
 
 - `pnpm validate`：通过。
 - `pnpm build`：通过。
-- PostgreSQL 17 共 6 个 migration：创建和实际应用通过。
+- PostgreSQL 17 共 7 个 migration：现有数据库原地应用和空数据库创建均通过。
 - `pnpm oidc:smoke`：authorization code + PKCE、state、nonce、consent、token 和 claims 通过。
 - Docker app/migrator 镜像：构建通过。
 - Compose migrator：退出码 0；app readiness：HTTP 200。
-- `pnpm test:phase3`：正常登录、风险 OTP、枚举保护、限流和关闭注册共 5 项通过。
-- `pnpm test:phase4`：secret 摘要、client/scope/redirect 拒绝、Directory 与签名 outbox 共 4 项通过。
+- `pnpm test:phase3`：正常登录、风险 OTP、枚举保护、限流、关闭注册和邀请用户名约束共 6 项通过。
+- `pnpm test:phase4`：secret 摘要、consent 应用名、client/scope/redirect 拒绝、Directory 与签名 outbox 共 5 项通过。
 - 浏览器 1280×720 与 390×844：管理控制台无页面横向溢出或控制台错误，用户表格在移动端受控横向滚动，错误状态可读。
 - `pnpm test:phase5`：真实 PostgreSQL + MinIO 的格式规范化、对象读回、版本替换和资料事件共 2 项通过。
 - `pnpm oidc:smoke:phase4`：完整 authorization code + PKCE、consent、token、refresh token 与 claims 回归通过。

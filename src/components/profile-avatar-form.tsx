@@ -5,7 +5,7 @@ import NextImage from "next/image";
 
 const OUTPUT_SIZE = 512;
 
-export function ProfileAvatarForm({ initialPicture, storageEnabled }: { initialPicture: string | null; storageEnabled: boolean }) {
+export function ProfileAvatarForm({ initialPicture, storageEnabled, returnTo }: { initialPicture: string | null; storageEnabled: boolean; returnTo?: string }) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -76,7 +76,11 @@ export function ProfileAvatarForm({ initialPicture, storageEnabled }: { initialP
       const result = await response.json() as { picture?: string; error?: string };
       if (!response.ok || !result.picture) throw new Error(result.error || "头像保存失败。");
       setPicture(result.picture);
-      setMessage("头像已更新。新登录签发的 OIDC 资料将使用此版本。");
+      if (returnTo) {
+        window.location.assign(returnTo);
+        return;
+      }
+      setMessage("头像已更新。已连接的应用将使用新头像。");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "头像保存失败。");
     } finally {
@@ -87,7 +91,7 @@ export function ProfileAvatarForm({ initialPicture, storageEnabled }: { initialP
   return <section className="profile-grid">
     <div className="panel profile-summary">
       <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">HF</span>}</div>
-      <div><p className="eyebrow">Current identity</p><h1 className="profile-title">你的头像</h1><p className="auth-copy">头像由 HFLive Auth 统一管理，并通过版本化 URL 同步到已批准的应用。</p></div>
+      <div><p className="eyebrow">统一资料</p><h1 className="profile-title">你的头像</h1><p className="auth-copy">在这里更新头像，已连接的 HFLive 应用会使用最新版本。</p></div>
     </div>
     <div className="panel crop-panel">
       <h2>上传并裁切</h2>
@@ -99,7 +103,7 @@ export function ProfileAvatarForm({ initialPicture, storageEnabled }: { initialP
           <label>水平位置 <input type="range" min="-100" max="100" value={offsetX} onChange={(event) => setOffsetX(Number(event.target.value))} /></label>
           <label>垂直位置 <input type="range" min="-100" max="100" value={offsetY} onChange={(event) => setOffsetY(Number(event.target.value))} /></label>
           <button className="primary-button" type="button" disabled={pending} onClick={submit}>{pending ? "保存中…" : "保存头像"}</button>
-        </div> : <p className="fine-print">支持 JPEG、PNG、WebP，原图不超过 8 MiB。服务端会再次校验并统一生成 512×512 WebP。</p>}
+        </div> : <p className="fine-print">支持 JPEG、PNG、WebP，图片不超过 8 MiB。保存后会自动处理成适合各应用使用的尺寸。</p>}
       </>}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {message ? <p className="form-success" role="status">{message}</p> : null}

@@ -143,6 +143,17 @@ h1 {
   line-height: 1.7;
 }
 
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  max-width: 360px;
+  margin-top: 30px;
+}
+
+.hero-actions a {
+  flex: 1;
+}
+
 .panel {
   position: relative;
   overflow: hidden;
@@ -273,6 +284,55 @@ h1 {
   line-height: 1.6;
 }
 
+.field-help {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.top-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 100;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  width: min(420px, calc(100vw - 32px));
+  padding: 13px 14px 13px 16px;
+  color: var(--text);
+  border: 1px solid rgba(157, 245, 173, 0.34);
+  border-radius: 12px;
+  background: rgba(13, 25, 17, 0.96);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+  transform: translateX(-50%);
+}
+
+.top-toast span {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.top-toast button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--muted);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.top-toast button:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+}
+
 .form-link {
   display: block;
   margin-top: 16px;
@@ -294,29 +354,6 @@ h1 {
   display: grid;
   place-items: center;
   text-decoration: none;
-}
-
-.client-id {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 20px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.client-id span {
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.client-id code {
-  overflow: hidden;
-  font-family: var(--font-mono), monospace;
-  text-overflow: ellipsis;
 }
 
 .scope-list {
@@ -393,6 +430,10 @@ h1 {
   line-height: 1.6;
 }
 
+.consent-note {
+  text-align: center;
+}
+
 .profile-shell { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0 88px; }
 .profile-grid { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(360px, 1.2fr); gap: 20px; align-items: start; }
 .profile-summary { display: grid; gap: 24px; }
@@ -417,6 +458,10 @@ h1 {
     grid-template-columns: 1fr;
     gap: 44px;
     padding-top: 56px;
+  }
+
+  .hero-actions {
+    max-width: none;
   }
 
   h1 {

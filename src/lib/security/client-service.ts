@@ -8,6 +8,17 @@ export const CLIENT_SCOPES = [...LOGIN_SCOPES, ...DIRECTORY_SCOPES] as const;
 export const EVENT_TYPES = ["user.status.changed", "user.profile.changed"] as const;
 const RETENTION_MS = 400 * 24 * 60 * 60 * 1_000;
 
+export async function getApprovedClientDisplayName(database: PrismaClient, clientId: string | undefined) {
+  if (!clientId) return undefined;
+
+  const client = await database.oauthClient.findFirst({
+    where: { clientId, approvalStatus: "APPROVED", disabled: false },
+    select: { name: true },
+  });
+
+  return client?.name;
+}
+
 function hashOAuthSecret(secret: string) {
   return createHash("sha256").update(secret).digest("base64url");
 }

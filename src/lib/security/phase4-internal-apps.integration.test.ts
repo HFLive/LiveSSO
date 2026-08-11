@@ -7,6 +7,7 @@ suite("Phase 4 internal applications", () => {
   let auth: (typeof import("../auth"))["auth"];
   let database: (typeof import("../prisma"))["prisma"];
   let createApprovedClient: typeof import("./client-service").createApprovedClient;
+  let getApprovedClientDisplayName: typeof import("./client-service").getApprovedClientDisplayName;
   let setUserAccountStatus: typeof import("./client-service").setUserAccountStatus;
   let dispatchOutboxBatch: typeof import("./outbox-dispatch").dispatchOutboxBatch;
   const runId = randomUUID();
@@ -16,7 +17,7 @@ suite("Phase 4 internal applications", () => {
   beforeAll(async () => {
     await import("dotenv/config");
     ({ auth } = await import("../auth")); ({ prisma: database } = await import("../prisma"));
-    ({ createApprovedClient, setUserAccountStatus } = await import("./client-service"));
+    ({ createApprovedClient, getApprovedClientDisplayName, setUserAccountStatus } = await import("./client-service"));
     ({ dispatchOutboxBatch } = await import("./outbox-dispatch"));
     const [admin, user] = await Promise.all([
       database.user.create({ data: { name: "Phase 4 admin", email: `p4-admin-${runId}@example.invalid`, platformRole: "ADMIN", emailVerified: true } }),
@@ -50,6 +51,15 @@ suite("Phase 4 internal applications", () => {
     const response = await token(client.clientId, client.clientSecret, "directory:user:read");
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: "invalid_scope" });
+  });
+
+  it("resolves the approved client name shown on the consent page", async () => {
+    const client = await createApprovedClient(database, { actorUserId: adminId, name: "LiveBoard Production", redirectUris: ["https://board.hsfz.live/api/auth/hflive/callback"], scopes: ["openid", "profile", "email"] });
+    createdClientIds.push(client.clientId);
+
+    await expect(getApprovedClientDisplayName(database, client.clientId)).resolves.toBe("LiveBoard Production");
+    await database.oauthClient.update({ where: { clientId: client.clientId }, data: { disabled: true } });
+    await expect(getApprovedClientDisplayName(database, client.clientId)).resolves.toBeUndefined();
   });
 
   it("rejects unapproved clients and a non-whitelisted redirect URI", async () => {

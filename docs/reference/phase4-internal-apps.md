@@ -8,6 +8,8 @@
 - `/admin` 与 `/api/admin/*` 只允许 `ACTIVE + ADMIN` 平台账号访问；普通 OIDC 登录和应用角色不会获得该权限。
 - 管理员审批并创建 confidential client。OAuth secret 使用 32 字节随机值，响应带 `no-store`，数据库只保存 SHA-256 base64url 摘要；创建或轮换响应结束后不可再次读取。
 - 登录 client 使用 authorization code + PKCE，redirect URI 逐字精确匹配。授权请求在进入登录流程前验证 client 已审批、未停用、回调和 scope 均在白名单。
+- consent 页面从已审批且启用的 client 记录读取管理员配置的应用名称；用户看到的是 `LiveBoard Production` 这类可信名称，而不是内部 `client_id`。协议请求仍使用真实 `client_id`，但它不作为页面上的应用名称展示。
+- 面向用户的权限说明按 Google/GitHub 的授权界面原则展示应用名称和具体数据用途；登录相关 scope 合并为“使用你的 HFLive 账号登录”，`offline_access` 表述为“保持登录状态”，页面不展示协议 scope 标识符。
 - Directory client 使用 `client_credentials`。停用、scope/回调修改或 secret 轮换会撤销该 client 的既有 access/refresh token；配置修改还撤销旧 consent。
 - dynamic client registration 和普通登录用户的 OAuth client 管理端点继续关闭。数据库约束要求非 `APPROVED` client 必须处于 disabled 状态。
 
@@ -52,4 +54,4 @@ client 创建、配置、停用/启用、secret 轮换、用户状态修改和 D
 pnpm test:phase4
 ```
 
-真实 PostgreSQL 测试覆盖：secret 仅存摘要、越权 scope 拒绝、未审批 client 拒绝、错误 redirect URI 不进入登录、M2M Directory 状态查询，以及签名 outbox 的单次完成。
+真实 PostgreSQL 测试覆盖：secret 仅存摘要、consent 应用名称解析、越权 scope 拒绝、未审批 client 拒绝、错误 redirect URI 不进入登录、M2M Directory 状态查询，以及签名 outbox 的单次完成。

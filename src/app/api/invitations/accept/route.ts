@@ -1,15 +1,14 @@
 import { hashPassword } from "better-auth/crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSecurityHashSecret } from "@/lib/env";
 import { sendSecurityNotice } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
-import { digestSensitiveValue } from "@/lib/security/digest";
 import { consumeInvitation } from "@/lib/security/domain-store";
+import { parseInvitationToken } from "@/lib/security/invitation-token";
 
 const inputSchema = z.object({
   token: z.string().min(20).max(200),
-  username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
+  username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/).optional(),
   name: z.string().trim().min(1).max(80),
   password: z.string().min(12).max(128),
 });
@@ -17,11 +16,9 @@ const inputSchema = z.object({
 export async function POST(request: Request) {
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVITATION_INVALID" }, { status: 400 });
-  const separator = parsed.data.token.indexOf(".");
-  const id = parsed.data.token.slice(0, separator);
-  const rawToken = parsed.data.token.slice(separator + 1);
-  if (separator < 1 || !rawToken) return NextResponse.json({ error: "INVITATION_INVALID" }, { status: 400 });
-  const tokenDigest = digestSensitiveValue("invitation-token", rawToken, getSecurityHashSecret());
+  const invitationToken = parseInvitationToken(parsed.data.token);
+  if (!invitationToken) return NextResponse.json({ error: "INVITATION_INVALID" }, { status: 400 });
+  const { id, tokenDigest } = invitationToken;
   const password = await hashPassword(parsed.data.password);
 
   try {
@@ -30,12 +27,14 @@ export async function POST(request: Request) {
         where: { id, tokenDigest, status: "PENDING", expiresAt: { gt: new Date() } },
       });
       if (!invitation) throw new Error("INVALID_INVITATION");
+      const displayUsername = invitation.username ?? parsed.data.username;
+      if (!displayUsername) throw new Error("INVALID_INVITATION");
       const created = await transaction.user.create({
         data: {
           email: invitation.normalizedEmail,
           emailVerified: true,
-          username: parsed.data.username.toLowerCase(),
-          displayUsername: parsed.data.username,
+          username: displayUsername.toLowerCase(),
+          displayUsername,
           name: parsed.data.name,
           platformRole: "USER",
           accounts: {

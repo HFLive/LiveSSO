@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { resolveLoginCallback } from "@/lib/login-callback";
 
 function getFriendlyError(code?: string) {
   switch (code) {
@@ -31,7 +32,7 @@ export function SignInForm() {
     setPending(true);
 
     const normalizedIdentifier = identifier.trim();
-    const callbackURL = new URLSearchParams(window.location.search).get("callbackURL") || undefined;
+    const callbackURL = resolveLoginCallback(window.location.href);
     const response = await fetch("/api/auth/hflive/sign-in", {
       method: "POST",
       headers: { "content-type": "application/json" },

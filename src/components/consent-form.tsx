@@ -3,21 +3,15 @@
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
-
-const scopeDescriptions: Record<string, string> = {
-  openid: "确认你的 HFLive 身份",
-  profile: "读取显示名、用户名与头像",
-  email: "读取邮箱及其验证状态",
-  offline_access: "在你离开后维持已授权的会话",
-};
+import { describeConsentPermissions } from "@/lib/consent-permissions";
 
 export function ConsentForm() {
   const searchParams = useSearchParams();
-  const clientId = searchParams.get("client_id") ?? "未知应用";
   const scopes = (searchParams.get("scope") ?? "openid")
     .split(" ")
     .map((scope) => scope.trim())
     .filter(Boolean);
+  const permissions = describeConsentPermissions(scopes);
   const [pending, setPending] = useState<"accept" | "deny">();
   const [error, setError] = useState<string>();
 
@@ -47,18 +41,13 @@ export function ConsentForm() {
 
   return (
     <>
-      <div className="client-id">
-        <span>Client</span>
-        <code>{clientId}</code>
-      </div>
-
       <ul className="scope-list">
-        {scopes.map((scope) => (
-          <li key={scope}>
+        {permissions.map((permission) => (
+          <li key={permission.title}>
             <span className="scope-dot" aria-hidden="true" />
             <span>
-              <strong>{scope}</strong>
-              <small>{scopeDescriptions[scope] ?? "访问此应用申请的内部能力"}</small>
+              <strong>{permission.title}</strong>
+              <small>{permission.description}</small>
             </span>
           </li>
         ))}
@@ -72,13 +61,12 @@ export function ConsentForm() {
 
       <div className="button-row">
         <button className="secondary-button" type="button" onClick={() => decide(false)} disabled={Boolean(pending)}>
-          {pending === "deny" ? "正在拒绝…" : "拒绝"}
+          {pending === "deny" ? "正在取消…" : "取消"}
         </button>
         <button className="primary-button" type="button" onClick={() => decide(true)} disabled={Boolean(pending)}>
-          {pending === "accept" ? "正在授权…" : "允许访问"}
+          {pending === "accept" ? "正在继续…" : "允许"}
         </button>
       </div>
     </>
   );
 }
-

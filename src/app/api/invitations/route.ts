@@ -8,7 +8,10 @@ import { isMailEnabled, sendTransactionalMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { digestSensitiveValue } from "@/lib/security/digest";
 
-const inputSchema = z.object({ email: z.email().max(254) });
+const inputSchema = z.object({
+  email: z.email().max(254),
+  username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
+});
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -20,6 +23,18 @@ export async function POST(request: Request) {
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   const email = parsed.data.email.trim().toLowerCase();
+  const username = parsed.data.username.trim();
+  const normalizedUsername = username.toLowerCase();
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: { equals: email, mode: "insensitive" } },
+        { username: { equals: normalizedUsername, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true },
+  });
+  if (existingUser) return NextResponse.json({ error: "INVITATION_UNAVAILABLE" }, { status: 409 });
   const rawToken = randomBytes(32).toString("base64url");
 
   try {
@@ -27,6 +42,7 @@ export async function POST(request: Request) {
       data: {
         email,
         normalizedEmail: email,
+        username,
         tokenDigest: digestSensitiveValue("invitation-token", rawToken, getSecurityHashSecret()),
         invitedById: actor.id,
         grantedRole: "USER",
@@ -39,7 +55,7 @@ export async function POST(request: Request) {
       await sendTransactionalMail({
         to: email,
         subject: "邀请你加入 HFLive",
-        text: `请在 7 天内打开以下链接创建 HFLive 账号并设置密码：\n${url}\n\n此链接只能使用一次。`,
+        text: `你受邀加入 HFLive。管理员为你指定的用户名是 ${username}。\n\n请在 7 天内打开以下链接设置显示名和密码：\n${url}\n\n此链接只能使用一次。`,
       });
     } catch (error) {
       await prisma.invitation.update({ where: { id: invitation.id }, data: { status: "REVOKED", revokedAt: new Date() } });

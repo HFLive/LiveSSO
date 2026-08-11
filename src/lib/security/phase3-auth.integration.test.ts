@@ -13,6 +13,8 @@ suite("Phase 3 credential and risk login integration", () => {
   const username = `p3_${runId.replaceAll("-", "").slice(0, 20)}`;
   const password = "Phase3-test-password-2026";
   let userId: string;
+  let invitedUserId: string | undefined;
+  let assignedInvitationId: string | undefined;
 
   beforeAll(async () => {
     await import("dotenv/config");
@@ -36,6 +38,12 @@ suite("Phase 3 credential and risk login integration", () => {
 
   afterAll(async () => {
     if (!database) return;
+    if (assignedInvitationId) {
+      await database.invitation.deleteMany({ where: { id: assignedInvitationId } });
+    }
+    if (invitedUserId) {
+      await database.user.deleteMany({ where: { id: invitedUserId } });
+    }
     if (userId) await database.user.delete({ where: { id: userId } });
     await database.$disconnect();
   });
@@ -104,6 +112,55 @@ suite("Phase 3 credential and risk login integration", () => {
     expect(await verified.json()).toMatchObject({ authenticated: true });
     expect(verified.headers.get("set-cookie")).toContain("better-auth.session_token");
     expect(await database.loginChallenge.count({ where: { userId, status: "CONSUMED" } })).toBe(1);
+  });
+
+  it("reserves and enforces the username assigned by an invitation", async () => {
+    const rawToken = `assigned-${runId}`;
+    const assignedUsername = `Assigned_${runId.replaceAll("-", "").slice(0, 16)}`;
+    const invitation = await database.invitation.create({
+      data: {
+        email: `assigned-${runId}@example.invalid`,
+        normalizedEmail: `assigned-${runId}@example.invalid`,
+        username: assignedUsername,
+        tokenDigest: digest("invitation-token", rawToken, secret),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    assignedInvitationId = invitation.id;
+
+    await expect(
+      database.invitation.create({
+        data: {
+          email: `duplicate-${runId}@example.invalid`,
+          normalizedEmail: `duplicate-${runId}@example.invalid`,
+          username: assignedUsername.toLowerCase(),
+          tokenDigest: digest("invitation-token", `duplicate-${runId}`, secret),
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      }),
+    ).rejects.toThrow();
+
+    const { POST } = await import("../../app/api/invitations/accept/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/invitations/accept", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          token: `${invitation.id}.${rawToken}`,
+          username: "browser_tampering",
+          name: "Assigned invitation user",
+          password,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const created = await database.user.findUniqueOrThrow({
+      where: { email: `assigned-${runId}@example.invalid` },
+    });
+    invitedUserId = created.id;
+    expect(created.username).toBe(assignedUsername.toLowerCase());
+    expect(created.displayUsername).toBe(assignedUsername);
   });
 
   it("keeps unknown-account and wrong-password responses indistinguishable", async () => {

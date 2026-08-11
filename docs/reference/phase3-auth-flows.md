@@ -6,13 +6,18 @@
 ## 账号创建
 
 - 公开 `/sign-up/email` 与原始 `/sign-in/email|username` 端点均关闭，避免绕过邀请和风险层。
-- `POST /api/invitations` 只接受当前 `ADMIN` 会话，邀请固定创建普通 `USER`，有效期 7 天。
+- `POST /api/invitations` 只接受当前 `ADMIN` 会话，管理员必须同时指定邮箱和 3–32 位全局用户名；邀请固定创建普通 `USER`，有效期 7 天。
 - 邀请链接保存 `Invitation` ID 与随机 token；数据库只保存用途隔离 HMAC 摘要。
+- 待处理邀请通过大小写不敏感的部分唯一索引预留用户名；接受页面只读显示管理员指定值，服务端以邀请记录为准，不接受浏览器改写。旧版本遗留的未指定用户名邀请仍允许受邀者填写。
 - 接受邀请时在同一数据库事务内创建 `User`、Better Auth `credential` account 并条件消费邀请。密码使用 Better Auth 哈希；链接并发只会成功一次。
 
 ## 登录与风险 challenge
 
 浏览器只调用 `/api/auth/hflive/sign-in`。服务端统一规范化用户名/邮箱，验证密码和 `accountStatus`，失败响应不区分账号不存在、密码错误或账号停用。
+
+当登录由 OAuth/OIDC authorize 发起时，登录页把原始同源授权查询恢复为
+`/api/auth/oauth2/authorize?...` 回跳地址。该地址同时覆盖直接登录和邮箱 OTP 路径，
+避免首次登录成功后落到站点首页并丢失 authorization code flow。
 
 初版可解释规则：
 

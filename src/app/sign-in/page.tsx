@@ -9,7 +9,7 @@ export default function SignInPage() {
   return (
     <main className="auth-main">
       <section className="panel auth-card">
-        <p className="eyebrow">Secure access</p>
+        <p className="eyebrow">HFLive 账号</p>
         <h1 className="auth-title">登录 HFLive</h1>
         <p className="auth-copy">使用你的用户名或邮箱继续。新设备可能需要完成额外验证。</p>
 

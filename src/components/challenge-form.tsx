@@ -21,5 +21,6 @@ export function ChallengeForm() {
     <label className="checkbox-row"><input name="trustDevice" type="checkbox" defaultChecked />信任此设备 30 天</label>
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     <button className="primary-button" disabled={pending}>{pending ? "正在验证…" : "验证并登录"}</button>
+    <a className="form-link" href="/sign-in">返回登录</a>
   </form>;
 }
