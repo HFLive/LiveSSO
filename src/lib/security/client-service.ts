@@ -31,6 +31,80 @@ export function assertWebhookUrl(value: string) {
   return url.toString();
 }
 
+function assertEventTypes(values: string[]) {
+  if (values.length === 0) throw new Error("eventTypes cannot be empty.");
+  if (values.some((value) => !EVENT_TYPES.includes(value as (typeof EVENT_TYPES)[number]))) {
+    throw new Error(`Unsupported event type. Allowed: ${EVENT_TYPES.join(", ")}.`);
+  }
+  return [...values];
+}
+
+export async function updateClientWebhook(database: PrismaClient, input: { actorUserId: string; clientId: string; endpointUrl?: string; eventTypes?: string[] }) {
+  const endpointUrl = input.endpointUrl !== undefined ? assertWebhookUrl(input.endpointUrl) : undefined;
+  const eventTypes = input.eventTypes !== undefined ? assertEventTypes(input.eventTypes) : undefined;
+  const now = new Date();
+  let createdSecret: string | undefined;
+  const updated = await database.$transaction(async (transaction) => {
+    const client = await transaction.oauthClient.findUnique({ where: { clientId: input.clientId, approvalStatus: "APPROVED" }, select: { clientId: true } });
+    if (!client) return false;
+    const existing = await transaction.clientWebhook.findUnique({ where: { clientId: input.clientId }, select: { clientId: true } });
+    if (existing) {
+      await transaction.clientWebhook.update({
+        where: { clientId: input.clientId },
+        data: { ...(endpointUrl !== undefined ? { endpointUrl } : {}), ...(eventTypes !== undefined ? { eventTypes } : {}), active: true, updatedAt: now },
+      });
+    } else {
+      if (!endpointUrl) throw new Error("A webhook URL is required when the client has no webhook yet.");
+      createdSecret = randomBytes(32).toString("base64url");
+      await transaction.clientWebhook.create({
+        data: { clientId: input.clientId, endpointUrl, signingSecretCiphertext: encryptWebhookSecret(createdSecret), eventTypes: eventTypes ?? [...EVENT_TYPES], active: true },
+      });
+    }
+    await transaction.auditEvent.create({
+      data: { eventType: "oauth.client.webhook.updated", actorType: "USER", actorUserId: input.actorUserId, clientId: input.clientId, outcome: "SUCCESS", severity: "CRITICAL", metadata: { endpointUrl, eventTypes }, expiresAt: new Date(now.getTime() + RETENTION_MS) },
+    });
+    return true;
+  });
+  return updated ? { webhookSecret: createdSecret } : null;
+}
+
+export async function rotateWebhookSecret(database: PrismaClient, actorUserId: string, clientId: string) {
+  const secret = randomBytes(32).toString("base64url");
+  const now = new Date();
+  const updated = await database.$transaction(async (transaction) => {
+    const webhook = await transaction.clientWebhook.findUnique({ where: { clientId }, select: { clientId: true } });
+    if (!webhook) return false;
+    await transaction.clientWebhook.update({ where: { clientId }, data: { signingSecretCiphertext: encryptWebhookSecret(secret), updatedAt: now } });
+    await transaction.auditEvent.create({
+      data: { eventType: "oauth.client.webhook.secret.rotated", actorType: "USER", actorUserId, clientId, outcome: "SUCCESS", severity: "CRITICAL", expiresAt: new Date(now.getTime() + RETENTION_MS) },
+    });
+    return true;
+  });
+  return updated ? secret : null;
+}
+
+export async function getClientWebhookStatus(database: PrismaClient, clientId: string) {
+  const webhook = await database.clientWebhook.findUnique({
+    where: { clientId },
+    select: { id: true, active: true, endpointUrl: true, eventTypes: true, updatedAt: true },
+  });
+  if (!webhook) return null;
+  const byWebhook = { payload: { path: ["webhookId"], equals: webhook.id } } satisfies Prisma.OutboxEventWhereInput;
+  const [pending, processing, deadLetter, delivered, recentFailures] = await Promise.all([
+    database.outboxEvent.count({ where: { ...byWebhook, status: "PENDING" } }),
+    database.outboxEvent.count({ where: { ...byWebhook, status: "PROCESSING" } }),
+    database.outboxEvent.count({ where: { ...byWebhook, status: "DEAD_LETTER" } }),
+    database.outboxEvent.count({ where: { ...byWebhook, status: "DELIVERED" } }),
+    database.outboxEvent.findMany({
+      where: { ...byWebhook, status: "DEAD_LETTER" },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      select: { id: true, eventType: true, attemptCount: true, lastErrorCode: true, updatedAt: true },
+    }),
+  ]);
+  return { webhook: { id: webhook.id, active: webhook.active, endpointUrl: webhook.endpointUrl, eventTypes: webhook.eventTypes, updatedAt: webhook.updatedAt }, counts: { pending, processing, deadLetter, delivered }, recentFailures };
+}
+
 export async function createApprovedClient(database: PrismaClient, input: {
   actorUserId: string;
   name: string;
