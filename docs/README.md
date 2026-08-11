@@ -4,19 +4,21 @@
 
 ## 文档地图
 
-| 文档 | 类型 | 用途 |
-| --- | --- | --- |
-| [architecture.md](./architecture.md) | 解释 / 架构 | 稳定目标、组件关系、协议边界、数据归属和安全不变量 |
-| [development-progress.md](./development-progress.md) | 动态状态 | 当前阶段、完成度、验证状态、阻塞项和下一步 |
-| [development-log.md](./development-log.md) | 开发记录 | 按日期追加实现过程、关键问题、修正与验证证据 |
-| [local-development.md](./local-development.md) | How-to | 本地启动、迁移、验证、容器运行和常见故障处理 |
-| [reference/security-domain-data.md](./reference/security-domain-data.md) | Reference | Phase 2 领域模型、状态机、摘要、保留期与并发契约 |
-| [reference/phase3-auth-flows.md](./reference/phase3-auth-flows.md) | Reference | Phase 3 邀请、邮件、风险登录、恢复和受信设备流程 |
-| [reference/phase4-internal-apps.md](./reference/phase4-internal-apps.md) | Reference | Phase 4 client 管理、Directory API、事件签名与 worker 契约 |
-| [reference/phase5-profile-deployment.md](./reference/phase5-profile-deployment.md) | Reference | Phase 5 头像处理、版本化 URL、R2/MinIO 与部署契约 |
-| [operations/backup-restore.md](./operations/backup-restore.md) | How-to | PostgreSQL 与头像对象的一致备份、隔离恢复和回滚 |
-| [../IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) | 路线图 | Phase 0–9 的总体实施基线与验收目标 |
-| [../PHASE_1_STATUS.md](../PHASE_1_STATUS.md) | 历史快照 | Phase 1 完成时的不可变验收记录 |
+| 文档                                                                               | 类型        | 用途                                                                      |
+| ---------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| [architecture.md](./architecture.md)                                               | 解释 / 架构 | 稳定目标、组件关系、协议边界、数据归属和安全不变量                        |
+| [development-progress.md](./development-progress.md)                               | 动态状态    | 当前阶段、完成度、验证状态、阻塞项和下一步                                |
+| [development-log.md](./development-log.md)                                         | 开发记录    | 按日期追加实现过程、关键问题、修正与验证证据                              |
+| [local-development.md](./local-development.md)                                     | How-to      | 本地启动、迁移、验证、容器运行和常见故障处理                              |
+| [reference/security-domain-data.md](./reference/security-domain-data.md)           | Reference   | Phase 2 领域模型、状态机、摘要、保留期与并发契约                          |
+| [reference/phase3-auth-flows.md](./reference/phase3-auth-flows.md)                 | Reference   | Phase 3 邀请、邮件、风险登录、恢复和受信设备流程                          |
+| [reference/phase4-internal-apps.md](./reference/phase4-internal-apps.md)           | Reference   | Phase 4 client 管理、Directory API、事件签名与 worker 契约                |
+| [reference/phase5-profile-deployment.md](./reference/phase5-profile-deployment.md) | Reference   | Phase 5 头像处理、版本化 URL、R2/MinIO 与部署契约                         |
+| [reference/phase6-liveboard-backend.md](./reference/phase6-liveboard-backend.md)   | Reference   | Phase 6 LiveBoard 认证模式、身份映射、状态同步、migration、回滚与验收基线 |
+| [reference/phase7-liveboard-frontend.md](./reference/phase7-liveboard-frontend.md) | Reference   | Phase 7 登录入口、冲突关联、资料归属、可访问性与验收证据                  |
+| [operations/backup-restore.md](./operations/backup-restore.md)                     | How-to      | PostgreSQL 与头像对象的一致备份、隔离恢复和回滚                           |
+| [../IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md)                             | 路线图      | Phase 0–9 的总体实施基线与验收目标                                        |
+| [../PHASE_1_STATUS.md](../PHASE_1_STATUS.md)                                       | 历史快照    | Phase 1 完成时的不可变验收记录                                            |
 
 面向 Codex/AI 开发者的强制规则在 [../AGENTS.md](../AGENTS.md)。`AGENTS.md` 只保存每次任务都应生效的短规则；详细事实和过程记录放在本目录。
 

@@ -538,6 +538,142 @@
 
 - 开始 Phase 6 只读审查，形成数据迁移、冲突处理、状态传播、故障宽限、回滚和验收矩阵后再实施 LiveBoard 代码改动。
 
+## 2026-08-09 — Phase 6 LiveBoard 后端设计冻结
+
+### 已完成
+
+- 只读审查 LiveBoard 当前认证 controller/service、全局 ActiveUserGuard、HMAC Cookie、用户管理、共享类型、Prisma schema/migrations、自托管 Compose/`.run` 和 Vercel Web/API 双项目结构。
+- 确认 LiveBoard 当前没有邮箱字段或服务端浏览器 session 表；现有安全链是 7 天签名 Cookie、每请求数据库状态检查和 `sessionVersion` 撤销。
+- 冻结 `local | hybrid | hflive_oidc`、固定 issuer、authorization code + PKCE、`ExternalIdentity`、JIT member、显式关联和本地角色不变量。
+- 冻结 webhook 快速撤销、Directory 15 分钟刷新、最近 ACTIVE 最长 60 分钟宽限、本地停用优先以及 break-glass 边界。
+- 明确采用向前兼容 schema 扩展：JIT 仍保存有效非空随机 Argon2 哈希并关闭本地密码，确保切回旧代码时安全拒绝而不是空哈希报错。
+- 新增完整 migration/灰度顺序、运行时和代码回滚边界，以及协议、冲突、并发、事件、双部署和日志验收矩阵。
+
+### 当前边界
+
+- 本轮只修正文档，没有修改 `/Users/xiang/Desktop/liveboard` 代码或数据库。
+- 设计基线见 [Phase 6 LiveBoard 后端接入设计](./reference/phase6-liveboard-backend.md)；下一步才进入 LiveBoard 后端实现。
+
+### 验证
+
+- `git diff --check` 通过。
+- `pnpm validate` 通过：ESLint、TypeScript/Prisma generate 和 30 项常规测试成功，15 项需外部服务的测试按条件跳过。
+- 最终状态检查确认 LiveBoard 仍为干净的 `main`，本轮改动仅位于 LiveSSO 的计划和文档文件。
+
+## 2026-08-11 — Phase 6 LiveBoard 后端实现与隔离验收
+
+### 目标
+
+- 按冻结设计完成 LiveBoard 后端接入，不修改 Phase 7 登录/关联界面，也不迁移现有用户。
+
+### 实现
+
+- 在 LiveBoard 新增向前 migration：兼容邮箱和本地密码开关、`ExternalIdentity`、幂等事件、追加式认证审计、规范化用户名唯一预检和并发状态刷新租约。
+- 新增 `local | hybrid | hflive_oidc` 服务端能力、固定 issuer 的 `openid-client` code + PKCE S256/state/nonce、10 分钟 Redis 单次事务和 returnTo 注入防护。
+- 实现现有映射、JIT member、用户名/邮箱冲突票据、旧密码/本地 session/管理员显式关联，以及不含 subject/email 的管理端同步状态接口。
+- 保留 LiveBoard 7 天 Cookie 和 `sessionVersion`；普通本地登录在纯 OIDC 模式查询用户前统一拒绝，独立 break-glass 仅允许 active super_admin 并写审计。
+- `ActiveUserGuard` 加入本地状态与外部状态 AND 检查、15 分钟刷新、60 分钟 ACTIVE 宽限、10 秒数据库租约与 local 运行时回滚旁路。
+- webhook 在 JSON 解析前校验原始 body、5 分钟时间窗、双 secret HMAC、event/client/type；状态/资料以 Directory 校准，重复和乱序事件持久化幂等。
+- LiveBoard `.env`、`.run` 升级器、Vercel/Ubuntu/README 和独立 HFLive Auth 运维文档同步更新；既有自托管实例只补 `AUTH_MODE=local`。
+
+### 关键决定或问题
+
+- `openid-client` v6 是 ESM，而 LiveBoard Nest API 编译为 CommonJS；使用固定模块名的运行时 dynamic import，并以编译后产物真实加载验证，避免把整个 API 改为 NodeNext。
+- 首次真实并发 webhook 测试触发 PostgreSQL/Prisma `P2034`；JIT、关联和事件事务统一加入最多 3 次 Serializable 有界重试，复测后只产生一次状态变更。
+- Docker Desktop 未运行且系统没有 `redis-server`。不连接当前 `.env` 数据库，改用 `/tmp` 隔离 PostgreSQL；真实 Redis 与 Compose 证据明确保留为正式联调项。
+- LiveBoard 任务前已有未跟踪 `improveteach.md`、`teach.md`；本轮保留不动。前者既有格式问题会让全量 `pnpm validate` 在 format 阶段退出，因此其余验证拆分执行。
+
+### 验证
+
+- 隔离 PostgreSQL 16：全新空库 9 个 migration 全部应用；baseline + 旧用户再应用 Phase 6 migration 成功，旧用户结果为 `LegacyTeacher|true|0`。
+- `pnpm test:phase6`：真实 PostgreSQL 双并发 JIT 与重复 event ID webhook 2 项通过；真实 Redis 项因本机无 server 按条件跳过。
+- Phase 6/guard/auth/health 定向单元测试 32 项通过；仓库级 API 472、Web 272、shared 16 项测试通过，发布 bundle、HTTPS agent 和 legacy baseline transition 脚本通过。
+- 任务文件 Prettier 检查、仓库级 typecheck、API/Web/shared production build 和 `git diff --check` 通过。
+- 正式 discovery/readiness 只读探测返回固定 issuer、authorization/token/JWKS、code、PKCE S256 与数据库 connected；编译产物实际生成包含 state、nonce、S256 verifier 的授权 URL。
+
+### 遗留事项
+
+- 配置正式 HFLive client/redirect/Directory/webhook secret 后，完成真实 authorization code callback、Directory 和签名 webhook smoke。
+- Docker 可用后复验 Compose migrator/readiness、HTTP/HTTPS Cookie；随后验证 Vercel Preview 隔离与 Production 稳定同源 `/api` 回调。
+- 上述外部证据闭环前，Phase 6 仍标记进行中，不能宣称官方 LiveBoard 已接入或现有用户已迁移。
+
+## 2026-08-11 — Phase 6 正式 client 与本机 dev 联调
+
+### 目标
+
+- 使用正式 `https://auth.hsfz.live`、本机 LiveBoard Web/API 和真实 PostgreSQL/Redis 完成后端链路验收，不进入 Phase 7 UI 实现。
+
+### 实现
+
+- 在 HFLive Auth 管理端创建并审批独立 OIDC dev client 与 Directory client；回调精确登记为 localhost Web 同源 `/api/auth/hflive/callback`，Directory 使用最小 `directory:user:read | directory:user:status` scope。
+- LiveBoard 以 `hybrid` 运行，OIDC token endpoint 改用 discovery 明确支持的 `client_secret_post`；保留安全诊断字段，仅记录错误类型、稳定 code、OAuth error 和 HTTP status。
+- 修正 `pnpm test:phase6`，自动加载仓库本地环境并默认覆盖真实 PostgreSQL、webhook 事务和 Redis 单次消费。
+
+### 关键决定或问题
+
+- HFLive 当前 OAuth Provider 对 `client_secret_basic` 中经过表单编码的 `-`、`_` 解析不完整；RFC 客户端发送的合法 Basic 凭据因此被误判为 `invalid_client`。LiveBoard 采用已公布的 `client_secret_post`，没有弱化 redirect、PKCE、state、nonce 或 client 审批。
+- 首次 OIDC 登录检测到 HFLive `admin` 与既有 LiveBoard `admin` 冲突并返回单次票据，没有自动合并。密码票据自助关联按设计只允许 `member`；本地 `super_admin` 改走已有会话加近期密码证明的 `LOCAL_SESSION` 流程，角色没有降级或提升。
+
+### 验证
+
+- 正式 Directory client 的 `client_credentials` 与用户资料/状态查询通过；OIDC authorization code、PKCE S256、token exchange、claims、Directory 校准和 localhost callback 全链路通过，浏览器最终进入 `/app/classrooms`。
+- LiveBoard 数据库仅有一个该 issuer 映射：本地 `admin` 保持 `super_admin`、active、本地密码启用与原 `sessionVersion`，外部身份为 `ACTIVE / LOCAL_SESSION / CURRENT`；审计记录 `oidc.link SUCCESS`。
+- 本机签名 webhook smoke 已产生 `APPLIED` 成功审计；`pnpm test:phase6` 的并发 JIT、重复 webhook 和真实 Redis `GETDEL` 3 项通过。
+- OIDC 定向单元测试 10 项、API typecheck、API build、任务文件 Prettier 检查均通过。
+
+### 遗留事项
+
+- 将稳定生产回调登记并部署到 LiveBoard Vercel Production，验证 HTTPS Cookie、Web `/api` rewrite 和 Preview 隔离。
+- 配置 HFLive outbox 到 LiveBoard 生产 webhook，验证真实状态/资料事件投递、重试和快速撤销；完成前保持 `hybrid`，不进入 Phase 8 用户迁移。
+
+## 2026-08-11 — Phase 7 LiveBoard 前端接入完成
+
+### 目标
+
+- 完成模式感知登录、账号冲突/主动关联和统一资料入口，不进入 Phase 8 真实用户迁移。
+
+### 实现
+
+- LiveBoard 登录页改为读取服务端 `GET /auth/config`：local 只显示本地登录，hybrid
+  以 HFLive 为主并保留本地登录，纯 OIDC 只显示 HFLive；break-glass 仅在服务端明确
+  开启时折叠展示。
+- OIDC callback 将账号冲突重定向到 `/login/link`；单次票据只放 URL fragment，页面
+  读入后立即移除。普通成员使用旧账号密码显式证明归属，失败/过期后必须重新发起。
+- 个人设置新增当前用户安全身份摘要、已有本地会话主动关联、同步冲突提示和 HFLive
+  `/profile` 入口；响应使用 `private, no-store` 且不返回 subject 或凭据。
+- 已关联且外部认证启用时，显示名和头像只读，当前/公开 UserProfile 优先外部 picture；
+  bio、Banner、徽章和偏好继续本地可编辑。API 同时拒绝绕过界面修改统一字段。
+- 补充加载骨架、中文 401、过期票据、16px 移动输入和无横向溢出处理；local 回滚继续
+  使用旧本地资料，不删除身份映射。
+- LiveBoard 与 HFLive Auth 文档同步记录 Phase 7 契约、验证和 Phase 8 边界。
+
+### 关键决定或问题
+
+- 冲突票据不放 query，避免进入 HTTP access log/referrer；使用 fragment + Redis
+  `GETDEL` 形成浏览器和服务端两层单次语义。
+- 首轮浏览器验收发现身份 API 完成前会短暂显示“当前实例使用本地身份”；改用稳定
+  页面骨架，禁止用未加载状态冒充真实账号归属。
+- 通用 API 401 跳转原本会吞掉冲突页的错误反馈；将公开的本地登录、break-glass 和
+  冲突密码证明端点从“会话过期跳转”中排除，并显示中文、不可枚举的失败信息。
+
+### 验证
+
+- `pnpm typecheck`、`pnpm test`、`pnpm build` 通过：API 477 项、Web 280 项、Shared
+  16 项，以及 deploy bundle、HTTPS agent、legacy baseline transition 脚本通过。
+- `pnpm test:phase6` 真实 PostgreSQL/Redis 的并发 JIT、重复 webhook 和 state
+  `GETDEL` 3 项通过；Phase 7 定向 API/Web 测试全部通过。
+- 真实 `hybrid`、正式 HFLive dev client 和已关联本地管理员账号浏览器验收通过：
+  1280×720 与 390×844 无横向溢出，移动输入 16px，冲突票据从地址栏移除，过期票据
+  不显示证明表单，外部头像/只读显示名/HFLive 入口生效，控制台无错误。
+- LiveBoard 任务文件格式化和 `git diff --check` 通过；任务前已有 `improveteach.md`、
+  `teach.md` 保持未修改。
+
+### 遗留事项
+
+- Phase 6 仍需完成 Vercel Production 稳定同源 callback、HTTPS Cookie、Preview 隔离
+  和 HFLive outbox 到生产 webhook 的真实投递证据。
+- Phase 8 尚未开始：不邀请/迁移真实成员，不批量建立映射，不切换官方默认入口。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：
@@ -546,8 +682,12 @@
 ## YYYY-MM-DD — 阶段或主题
 
 ### 目标
+
 ### 实现
+
 ### 关键决定或问题
+
 ### 验证
+
 ### 遗留事项
 ```

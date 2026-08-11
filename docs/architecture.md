@@ -1,7 +1,7 @@
 # 架构与关键边界
 
-状态：Phase 0–5 已验收；Phase 6 LiveBoard 后端接入进行中
-最后更新：2026-08-09
+状态：Phase 0–5 与 Phase 7 已验收；Phase 6 代码/本机联调完成、生产部署证据待闭环
+最后更新：2026-08-11
 
 ## 系统目标
 
@@ -44,12 +44,12 @@ OIDC token 不携带 LiveBoard 管理员或业务角色。接入应用必须依�
 
 ## 身份与资料归属
 
-| 数据 | 权威来源 |
-| --- | --- |
-| `sub`、用户名、邮箱、邮箱验证状态 | HFLive Auth |
-| 显示名、头像、全局账号状态 | HFLive Auth |
-| LiveBoard member/admin/super_admin | LiveBoard |
-| 课堂、内容、通知和其他业务数据 | 对应接入应用 |
+| 数据                               | 权威来源     |
+| ---------------------------------- | ------------ |
+| `sub`、用户名、邮箱、邮箱验证状态  | HFLive Auth  |
+| 显示名、头像、全局账号状态         | HFLive Auth  |
+| LiveBoard member/admin/super_admin | LiveBoard    |
+| 课堂、内容、通知和其他业务数据     | 对应接入应用 |
 
 LiveBoard 将在 Phase 6 以 `(issuer, subject)` 建立 `ExternalIdentity`。用户名或邮箱冲突不得自动合并；需要旧账号密码证明或管理员人工关联。JIT 只能创建普通成员，不能提升管理员权限。
 

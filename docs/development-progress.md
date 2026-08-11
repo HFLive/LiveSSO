@@ -1,25 +1,25 @@
 # 开发进度
 
-最后更新：2026-08-09  
-当前阶段：Phase 6 LiveBoard 后端接入
-生产状态：HFLive Auth 核心平台已上线；LiveBoard 尚未接入
+最后更新：2026-08-11
+当前阶段：Phase 7 LiveBoard 前端接入完成，等待 Phase 6 生产部署闭环后进入 Phase 8
+生产状态：HFLive Auth 核心平台已上线；LiveBoard 后端和前端本机真实 hybrid 联调通过，正式部署回调和生产 webhook 待验收
 
 本文件是项目当前完成度和下一步的唯一动态状态页。总体阶段定义见 [实施方案](../IMPLEMENTATION_PLAN.md)，Phase 1 的完成时证据见 [历史验收快照](../PHASE_1_STATUS.md)。
 
 ## 阶段总览
 
-| 阶段 | 状态 | 说明 |
-| --- | --- | --- |
-| Phase 0 基础契约 | 完成 | issuer、claims、scopes、接入边界和部署模式已确认 |
-| Phase 1 工程/OIDC 骨架 | 完成 | 本地、生产构建、真实 PostgreSQL、PKCE 和 Docker 均验证 |
-| Phase 2 安全与领域数据 | 完成 | 领域模型、数据库约束、摘要策略、原子消费/租约和管理员审计 |
-| Phase 3 邀请/邮件/风险登录 | 完成 | 邀请、首次密码、邮件 OTP、恢复、风险规则和 30 天受信设备 |
-| Phase 4 内部应用管理 | 完成 | client 生命周期、Directory API、可靠签名事件与审计控制台 |
-| Phase 5 头像与正式部署 | 完成 | 自部署、恢复、官方 Vercel/Neon/R2/Resend、调度和静态分发均已验收 |
-| Phase 6 LiveBoard 后端 | 进行中 | 先审查并冻结设计，再实现三种认证模式、ExternalIdentity、JIT、状态同步 |
-| Phase 7 LiveBoard 前端 | 未开始 | 登录入口、账号关联、统一资料入口 |
-| Phase 8 用户迁移 | 未开始 | 邀请、显式关联、hybrid 观察与回滚 |
-| Phase 9 上线运维 | 未开始 | 安全测试、备份恢复、轮换与事故流程 |
+| 阶段                       | 状态   | 说明                                                                                                                          |
+| -------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0 基础契约           | 完成   | issuer、claims、scopes、接入边界和部署模式已确认                                                                              |
+| Phase 1 工程/OIDC 骨架     | 完成   | 本地、生产构建、真实 PostgreSQL、PKCE 和 Docker 均验证                                                                        |
+| Phase 2 安全与领域数据     | 完成   | 领域模型、数据库约束、摘要策略、原子消费/租约和管理员审计                                                                     |
+| Phase 3 邀请/邮件/风险登录 | 完成   | 邀请、首次密码、邮件 OTP、恢复、风险规则和 30 天受信设备                                                                      |
+| Phase 4 内部应用管理       | 完成   | client 生命周期、Directory API、可靠签名事件与审计控制台                                                                      |
+| Phase 5 头像与正式部署     | 完成   | 自部署、恢复、官方 Vercel/Neon/R2/Resend、调度和静态分发均已验收                                                              |
+| Phase 6 LiveBoard 后端     | 进行中 | 实现、正式 client、本机 dev OIDC/Directory、真实 Redis 与签名 webhook smoke 通过；尚缺 Vercel 同源回调和生产 webhook 投递证据 |
+| Phase 7 LiveBoard 前端     | 完成   | 模式感知登录、冲突/会话关联、统一资料只读与跳转、外部头像优先及桌面/移动验收完成                                              |
+| Phase 8 用户迁移           | 未开始 | 邀请、显式关联、hybrid 观察与回滚                                                                                             |
+| Phase 9 上线运维           | 未开始 | 安全测试、备份恢复、轮换与事故流程                                                                                            |
 
 ## 当前可用能力
 
@@ -57,6 +57,18 @@
 - 新 Compose 镜像：migrator/minio-init 退出 0，app readiness 200；浏览器头像真实上传、移动断点、键盘与错误状态通过。
 - PostgreSQL custom dump 与 MinIO mirror 已恢复到隔离数据库/bucket，源/恢复计数一致；演练资源已清理。
 - GitHub 仓库已初始化并发布到 `HFLive/LiveSSO`；CI、Dependabot、CODEOWNERS、安全策略和 PR 模板已合并到 `main`。
+- LiveBoard Phase 6：空库和 baseline 旧库 migration 均在隔离 PostgreSQL 16 实际应用；旧用户保持 `localPasswordEnabled=true`、`sessionVersion=0`。
+- LiveBoard Phase 6：真实 PostgreSQL 并发 JIT 与重复 webhook 集成测试通过；同一 subject 仅创建一个用户/映射，重复事件仅递增一次 sessionVersion。
+- LiveBoard 仓库级 typecheck、472 项 API 测试、272 项 Web 测试、16 项 shared 测试、发布脚本测试和 production build 通过；本次变更文件格式检查通过。
+- 正式 `https://auth.hsfz.live` discovery/readiness 只读探测通过，issuer、code、PKCE S256、授权/token/JWKS 端点和数据库 readiness 符合冻结契约；以编译后 CommonJS 产物实际加载 `openid-client` 并生成 state、nonce、PKCE 授权 URL 成功。
+- 正式 HFLive OIDC 与 Directory dev client 已完成管理员审批和 secret 轮换；Directory `client_credentials` 返回 200，OIDC client 对不允许的 grant 返回预期 `unauthorized_client`，未再出现凭据拒绝。
+- LiveBoard 本机 `hybrid` 真实浏览器联调通过：authorization code + PKCE、token exchange、claims、Directory 和回调均成功；同名 `super_admin` 未自动合并，经本地会话显式关联后进入 `/app/classrooms`。
+- 数据库证据：`admin` 保持 `super_admin`、active、本地密码启用和原 `sessionVersion`；唯一外部映射为 `ACTIVE / LOCAL_SESSION / CURRENT`，认证审计记录 `oidc.link SUCCESS`。
+- LiveBoard `pnpm test:phase6` 现默认加载本地环境并验证真实 PostgreSQL 并发 JIT、重复 webhook 事务和 Redis `GETDEL`，3 项通过；OIDC 定向单元测试 10 项、API typecheck、API build 与任务文件格式检查通过。
+- LiveBoard Phase 7：登录页按 `local | hybrid | hflive_oidc` 服务端能力显示入口；break-glass 仅在明确启用时折叠展示，OIDC 冲突通过 fragment 单次票据进入旧密码显式关联页。
+- LiveBoard Phase 7：个人设置区分 HFLive 权威字段与 LiveBoard 私有字段；外部头像优先、显示名/头像只读及服务端绕过保护通过定向测试，local 回滚仍使用旧本地资料。
+- LiveBoard Phase 7 仓库级 typecheck、477 项 API 测试、280 项 Web 测试、16 项 Shared 测试、发布脚本回归和 production build 通过；真实 PostgreSQL/Redis Phase 6 持久化 3 项回归通过。
+- 浏览器 1280×720 与 390×844 的真实 `hybrid` 登录、冲突、过期票据和已关联个人设置通过；无横向溢出，移动输入 16px，外部头像/只读字段生效且控制台无错误。
 
 ## Phase 2 验收
 
@@ -151,9 +163,32 @@ Phase 4 已完成以下内部应用路径：
 - 创建真实成员邀请，验收邀请邮件与接受流程；不在生产创建 disposable 测试账号。
 - 分别记录中国大陆与境外真实用户网络的加载时间和失败率；EdgeOne 技术链路通过不等于已经证明大陆访问提速。
 
+## Phase 7 完成验收
+
+已完成：
+
+1. 登录页从 `GET /auth/config` 读取服务端真实能力，完整覆盖 local、hybrid、
+   hflive_oidc 与受控 break-glass 展示矩阵。
+2. OIDC 冲突 callback 回跳专用页面，单次票据仅放 fragment 并在读取后移除；普通
+   成员用旧密码显式关联，管理员不允许自助合并。
+3. 已有本地会话可在个人设置以当前密码发起 HFLive 关联；成功后仍创建 LiveBoard
+   本地会话，应用角色和权限不改变。
+4. 个人设置明确展示统一身份归属；HFLive 用户名、邮箱、显示名和头像只读并跳转
+   HFLive 修改，bio、Banner、徽章和偏好继续由 LiveBoard 管理。
+5. API 返回当前用户安全身份摘要并使用 `private, no-store`；服务端拒绝绕过 UI 修改
+   HFLive 权威显示名或头像，local 回滚恢复旧本地资料。
+6. 桌面/移动、键盘焦点、中文错误、过期票据、加载骨架和横向溢出均已验证。
+
+完整契约与证据见 [Phase 7 LiveBoard 前端接入参考](./reference/phase7-liveboard-frontend.md)。
+
+Phase 8 尚未开始：未发送真实成员邀请、未批量关联约 10 个旧用户、未切换官方实例
+默认登录模式，也未移除 local 回滚能力。
+
 ## 已知限制与注意事项
 
-- HFLive Auth 核心基础设施、管理员登录、风险 OTP 与 R2 头像链路已验收；LiveBoard 的 OIDC/Directory/webhook 接入仍不能表述为通过。
+- HFLive Auth 核心基础设施与 LiveBoard Phase 6 后端代码、migration、正式 dev client 和本机真实 OIDC/Directory/Redis 联调已完成；Vercel Production 稳定同源回调和 HFLive outbox 对 LiveBoard 生产 webhook 的真实投递尚未验收，因此不能表述为生产 LiveBoard 已完成切换。
+- LiveBoard Docker PostgreSQL/Redis/MinIO 已运行，真实 Redis `GETDEL` 和 localhost HTTP Cookie 已验证；本轮没有重建 Compose app/migrator 镜像，也没有验证 HTTPS Cookie、Vercel Preview 隔离或 Production 回调。
+- LiveBoard 的 `improveteach.md`、`teach.md` 是任务前已有未跟踪文件；`improveteach.md` 的既有 Prettier 风格使全量 `pnpm validate` 在 format 阶段退出。本轮未修改它们，改为对任务文件执行格式检查并独立完成 typecheck、test 和 build。
 - Vercel Hobby 不支持每分钟原生 Cron；官方 Hobby 部署必须使用仓库内 Cloudflare Worker Cron，且 Vercel 与 Worker 注入相同的独立 `OUTBOX_WORKER_SECRET`。
 - `hsfz.live` 未备案时 EdgeOne 只能选择 `overseas`，不能使用中国大陆节点；静态分发不承诺中国大陆访问速度。
 - 自部署关闭邮件时邀请/恢复不可用，风险登录明确降级为密码登录并记录审计；官方生产禁止关闭邮件。
