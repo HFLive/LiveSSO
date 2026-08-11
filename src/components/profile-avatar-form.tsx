@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import NextImage from "next/image";
 import Link from "next/link";
+import { BrandMark } from "@/components/brand-mark";
 
 const OUTPUT_SIZE = 512;
 
@@ -20,16 +21,23 @@ export function ProfileAvatarForm({
   initialPicture,
   storageEnabled,
   returnTo,
+  returnAppName,
 }: {
   profile: ProfileDetails;
   initialPicture: string | null;
   storageEnabled: boolean;
   returnTo?: string;
+  returnAppName?: string;
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const [picture, setPicture] = useState(initialPicture);
+  const [name, setName] = useState(profile.name);
+  const [nameDraft, setNameDraft] = useState(profile.name);
+  const [namePending, setNamePending] = useState(false);
+  const [nameMessage, setNameMessage] = useState<string>();
+  const [nameError, setNameError] = useState<string>();
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
@@ -108,20 +116,50 @@ export function ProfileAvatarForm({
     }
   }
 
+  async function submitName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNamePending(true);
+    setNameMessage(undefined);
+    setNameError(undefined);
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: nameDraft }),
+      });
+      const result = await response.json() as { name?: string; error?: string };
+      if (!response.ok || !result.name) {
+        throw new Error(result.error || "显示名保存失败，请稍后重试。");
+      }
+      setName(result.name);
+      setNameDraft(result.name);
+      setNameMessage("显示名已更新。已连接的应用将自动同步。");
+    } catch (cause) {
+      setNameError(cause instanceof Error ? cause.message : "显示名保存失败，请稍后重试。");
+    } finally {
+      setNamePending(false);
+    }
+  }
+
   return <section className="profile-page">
     <header className="profile-page-header">
       <Link className="brand" href="/">
-        <span className="brand-mark" aria-hidden="true" />
+        <BrandMark />
         HFLive Auth
       </Link>
-      <Link className="secondary-link" href="/">返回首页</Link>
+      {returnTo ? (
+        <Link className="secondary-link profile-return-link" href={returnTo}>
+          <span>完成并返回</span>
+          <strong>{returnAppName ?? "已连接的应用"}</strong>
+        </Link>
+      ) : <Link className="secondary-link" href="/">返回首页</Link>}
     </header>
 
     <div className="panel profile-hero">
-      <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{profile.name.slice(0, 1).toUpperCase()}</span>}</div>
+      <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
       <div className="profile-hero-copy">
         <p className="eyebrow">个人资料</p>
-        <h1 className="profile-title">{profile.name}</h1>
+        <h1 className="profile-title">{name}</h1>
         <p className="profile-handle">@{profile.username ?? "未设置用户名"}</p>
         <p className="auth-copy">这些资料用于 HFLive Auth 和已连接的组织应用。</p>
       </div>
@@ -132,16 +170,39 @@ export function ProfileAvatarForm({
       <div className="panel profile-details">
         <div className="section-heading">
           <div><p className="eyebrow">基本资料</p><h2>账号信息</h2></div>
-          <span className="quiet-badge">集中管理</span>
+          <span className="quiet-badge editable">部分可编辑</span>
         </div>
         <dl className="profile-data-list">
-          <div><dt>显示名</dt><dd>{profile.name}</dd></div>
+          <div className="profile-name-row"><dt>显示名</dt><dd>
+            <form className="profile-name-form" onSubmit={submitName}>
+              <input
+                aria-label="显示名"
+                maxLength={80}
+                onChange={(event) => {
+                  setNameDraft(event.target.value);
+                  setNameMessage(undefined);
+                  setNameError(undefined);
+                }}
+                required
+                value={nameDraft}
+              />
+              <button
+                className="secondary-button"
+                disabled={namePending || nameDraft.trim() === name}
+                type="submit"
+              >
+                {namePending ? "保存中…" : "保存"}
+              </button>
+            </form>
+            {nameError ? <small className="profile-field-error" role="alert">{nameError}</small> : null}
+            {nameMessage ? <small className="profile-field-success" role="status">{nameMessage}</small> : null}
+          </dd></div>
           <div><dt>用户名</dt><dd>{profile.username ?? "未设置"}</dd></div>
           <div><dt>邮箱</dt><dd>{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></dd></div>
           <div><dt>账号类型</dt><dd>{profile.platformRole === "ADMIN" ? "管理员" : "成员"}</dd></div>
           <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
         </dl>
-        <p className="fine-print">显示名、用户名和邮箱目前由管理员维护。头像可由你自行更新。</p>
+        <p className="fine-print">显示名和头像可由你自行更新；用户名和邮箱由管理员维护。</p>
       </div>
 
       <div className="panel crop-panel">

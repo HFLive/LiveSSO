@@ -38,9 +38,9 @@
 - `/admin` 提供 client 审批/停用/回调与 scope 维护/secret 轮换、用户状态和最近审计。
 - Directory API 使用 `client_credentials` 与 `directory:user:read | directory:user:status` 最小 scope。
 - 用户状态变化按订阅 client 生成独立 outbox，通过带时间戳 HMAC webhook 可靠投递。
-- `/profile` 以个人资料页展示头像、显示名、用户名、邮箱验证、账号类型和加入时间；当前开放头像选择、裁切与键盘调整，服务端规范化为 512×512 WebP 并写入 R2/MinIO。
+- `/profile` 以个人资料页展示头像、显示名、用户名、邮箱验证、账号类型和加入时间；开放显示名编辑及头像选择、裁切与键盘调整，服务端将头像规范化为 512×512 WebP 并写入 R2/MinIO。
 - 首页和登录页读取服务端会话；已登录用户不再看到登录按钮，OIDC 登录请求直接继续授权而不重复要求密码。
-- 已审批应用可携带受控 `returnTo` 进入 `/profile`，头像保存后自动返回原应用页面；非白名单目标被忽略。
+- 已审批应用可携带受控 `returnTo` 进入 `/profile`，页头明确显示“完成并返回”及应用产品名，头像保存后自动返回原应用页面；非白名单目标被忽略。
 - 头像使用同源版本化 URL，旧版本保留，更新会写审计并生成 `user.profile.changed` outbox。
 
 ## 最近验证

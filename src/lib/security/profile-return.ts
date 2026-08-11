@@ -16,11 +16,37 @@ export function normalizeProfileReturnTo(value: string | undefined, allowedOrigi
   return target.toString();
 }
 
-export async function resolveProfileReturnTo(database: PrismaClient, value: string | undefined) {
+export function profileReturnClientLabel(name: string | null, hostname: string) {
+  if (hostname === "board.hsfz.live") return "LiveBoard";
+  const trimmedName = name?.trim();
+  if (trimmedName) return trimmedName.replace(/\s+Production$/i, "") || trimmedName;
+  return hostname;
+}
+
+export async function resolveProfileReturnTarget(database: PrismaClient, value: string | undefined) {
+  if (!value) return undefined;
+
   const clients = await database.oauthClient.findMany({
     where: { approvalStatus: "APPROVED", disabled: false },
-    select: { redirectUris: true },
+    select: { name: true, redirectUris: true },
   });
-  const allowedOrigins = clients.flatMap((client) => client.redirectUris.map((uri) => new URL(uri).origin));
-  return normalizeProfileReturnTo(value, allowedOrigins);
+
+  for (const client of clients) {
+    const allowedOrigins = client.redirectUris.flatMap((uri) => {
+      try {
+        return [new URL(uri).origin];
+      } catch {
+        return [];
+      }
+    });
+    const url = normalizeProfileReturnTo(value, allowedOrigins);
+    if (url) {
+      return {
+        url,
+        appName: profileReturnClientLabel(client.name, new URL(url).hostname),
+      };
+    }
+  }
+
+  return undefined;
 }

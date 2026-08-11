@@ -8,6 +8,15 @@ const MAX_SOURCE_DIMENSION = 8_192;
 const PROFILE_RETENTION_MS = 400 * 24 * 60 * 60 * 1_000;
 
 export class ProfileImageError extends Error {}
+export class ProfileNameError extends Error {}
+
+export function normalizeProfileName(value: string) {
+  const name = value.trim().replace(/\s+/g, " ");
+  if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) {
+    throw new ProfileNameError("显示名必须为 1–80 个字符，且不能包含控制字符。");
+  }
+  return name;
+}
 
 async function normalizeProfileImage(source: Uint8Array) {
   if (source.byteLength === 0 || source.byteLength > MAX_SOURCE_BYTES) throw new ProfileImageError("头像文件必须小于 8 MiB。");
@@ -23,6 +32,73 @@ async function normalizeProfileImage(source: Uint8Array) {
 
 export function profileImageUrl(origin: string, userId: string, version: number) {
   return `${origin}/api/profile/avatar/${userId}?v=${version}`;
+}
+
+export async function updateProfileName(
+  database: PrismaClient,
+  input: { userId: string; name: string },
+) {
+  const name = normalizeProfileName(input.name);
+  const now = new Date();
+  const changeId = randomUUID();
+
+  return database.$transaction(async (transaction) => {
+    await transaction.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "user" WHERE "id" = ${input.userId}::uuid FOR UPDATE`,
+    );
+    const current = await transaction.user.findUnique({
+      where: { id: input.userId },
+      select: { name: true, accountStatus: true },
+    });
+    if (!current || current.accountStatus !== "ACTIVE") {
+      throw new ProfileNameError("当前账号不能修改显示名。");
+    }
+    if (current.name === name) return { name, changed: false };
+
+    await transaction.user.update({
+      where: { id: input.userId },
+      data: { name },
+    });
+    const webhooks = await transaction.clientWebhook.findMany({
+      where: {
+        active: true,
+        eventTypes: { has: "user.profile.changed" },
+        client: { disabled: false, approvalStatus: "APPROVED" },
+      },
+      select: { id: true, clientId: true },
+    });
+    await Promise.all(
+      webhooks.map((webhook) =>
+        transaction.outboxEvent.create({
+          data: {
+            aggregateType: "user",
+            aggregateId: input.userId,
+            eventType: "user.profile.changed",
+            idempotencyKey: `user-profile:${input.userId}:name:${changeId}:${webhook.id}`,
+            payload: {
+              webhookId: webhook.id,
+              clientId: webhook.clientId,
+              subject: input.userId,
+              name,
+              occurredAt: now.toISOString(),
+            },
+          },
+        }),
+      ),
+    );
+    await transaction.auditEvent.create({
+      data: {
+        eventType: "user.profile.changed",
+        actorType: "USER",
+        actorUserId: input.userId,
+        subjectUserId: input.userId,
+        outcome: "SUCCESS",
+        metadata: { field: "name", deliveryCount: webhooks.length },
+        expiresAt: new Date(now.getTime() + PROFILE_RETENTION_MS),
+      },
+    });
+    return { name, changed: true };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function replaceProfileImage(database: PrismaClient, input: { userId: string; origin: string; source: Uint8Array }) {

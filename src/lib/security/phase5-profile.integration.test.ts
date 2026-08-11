@@ -3,7 +3,11 @@ import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { deleteProfileObject, getProfileObject } from "@/lib/object-storage";
 import { createApprovedClient } from "@/lib/security/client-service";
-import { ProfileImageError, replaceProfileImage } from "@/lib/security/profile-service";
+import {
+  ProfileImageError,
+  replaceProfileImage,
+  updateProfileName,
+} from "@/lib/security/profile-service";
 
 const run = process.env.RUN_PHASE5_TESTS === "true";
 const suite = run ? describe : describe.skip;
@@ -65,5 +69,30 @@ suite("Phase 5 profile avatar integration", () => {
 
   it("rejects undecodable input before creating metadata", async () => {
     await expect(replaceProfileImage(database, { userId, origin: "https://auth.hsfz.live", source: new Uint8Array([1, 2, 3]) })).rejects.toBeInstanceOf(ProfileImageError);
+  });
+
+  it("updates the display name and emits a profile event", async () => {
+    await expect(
+      updateProfileName(database, { userId, name: "  新显示名  " }),
+    ).resolves.toEqual({ name: "新显示名", changed: true });
+    expect(
+      await database.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      }),
+    ).toEqual({ name: "新显示名" });
+    const event = await database.outboxEvent.findFirstOrThrow({
+      where: {
+        aggregateId: userId,
+        eventType: "user.profile.changed",
+        idempotencyKey: { contains: ":name:" },
+      },
+      select: { payload: true },
+    });
+    expect(event.payload).toMatchObject({
+      clientId,
+      subject: userId,
+      name: "新显示名",
+    });
   });
 });

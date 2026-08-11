@@ -5,15 +5,15 @@
 
 ## 头像契约
 
-- 已登录且状态为 `ACTIVE` 的用户通过 `/profile` 管理个人资料；页面集中展示头像、显示名、用户名、邮箱验证状态、账号类型和加入时间。当前只有头像允许本人修改，其他字段明确标记为管理员维护；上传端点为 `POST /api/profile/avatar`。
-- 已批准应用可在资料页 URL 中携带 `returnTo`。服务端只接受与已审批、启用 client 的 redirect URI 同源的 HTTPS 页面，移除 fragment，并在头像保存成功后返回该页面；未批准目标会被忽略，避免开放重定向。
+- 已登录且状态为 `ACTIVE` 的用户通过 `/profile` 管理个人资料；页面集中展示头像、显示名、用户名、邮箱验证状态、账号类型和加入时间。显示名通过 `PATCH /api/profile`、头像通过 `POST /api/profile/avatar` 由本人修改；用户名和邮箱仍由管理员维护。
+- 已批准应用可在资料页 URL 中携带 `returnTo`。服务端只接受与已审批、启用 client 的 redirect URI 同源的 HTTPS 页面，移除 fragment；资料页会显示“完成并返回”和经确认的产品名，头像保存成功后也会自动返回该页面。直接访问资料页仍显示“返回首页”，未批准目标会被忽略，避免开放重定向。
 - 浏览器提供居中裁切、缩放和横纵位置调整；服务端不信任客户端编码结果，会重新解码并输出 512×512 WebP。
 - 输入只接受 JPEG、PNG、WebP，原文件最大 8 MiB，任一边最大 8192 像素；解码失败、像素炸弹或错误格式统一拒绝。
 - 对象键使用 `avatars/{sub}/{uuid}.webp`，bucket 保持私有。应用通过 `GET /api/profile/avatar/{sub}?v={version}` 流式读取，不把对象存储凭据或临时签名 URL 暴露给浏览器。
 - `User.image` 与 OIDC `picture` 使用同源、版本化 URL。成功替换后旧 `ACTIVE` 资产转为 `REPLACED`，新资产转为 `ACTIVE`。
 - 版本化响应使用一年 immutable cache；旧版本至少保留 30 天，以覆盖已签发 token 和接入应用缓存。后续清理任务只能删除已超过保留期的 `REPLACED/DELETED` 对象。
 - 头像读取要求合法 UUID 与正整数版本；参数错误、未找到和存储故障均显式使用 `private, no-store`，只有成功的版本化对象可以公开 immutable 缓存。
-- 更新事务写入 `user.profile.changed` 审计，并为每个启用且订阅该事件的已批准 client 建立独立 outbox。
+- 显示名或头像更新事务写入 `user.profile.changed` 审计，并为每个启用且订阅该事件的已批准 client 建立独立 outbox；接入应用收到事件后通过 Directory API 校准完整资料。
 
 ## 对象存储环境
 
@@ -32,7 +32,7 @@
 ## 官方部署检查
 
 1. Vercel production 绑定固定域名 `auth.hsfz.live`，`BETTER_AUTH_URL` 与 `NEXT_PUBLIC_AUTH_URL` 均为 `https://auth.hsfz.live`。
-2. `DATABASE_URL` 使用 pooled PostgreSQL URL，`DIRECT_DATABASE_URL` 使用 direct URL；Neon 连接串显式使用 `sslmode=verify-full`（保留 Neon 提供的 `channel_binding=require`），避免依赖 `pg` 即将变化的 `sslmode=require` 兼容语义；部署前单独运行 `pnpm db:deploy`。
+2. `DATABASE_URL` 使用 pooled PostgreSQL URL，`DIRECT_DATABASE_URL` 使用 direct URL；Neon 连接串显式使用 `sslmode=verify-full`（保留 Neon 提供的 `channel_binding=require`），避免依赖 `pg` 即将变化的 `sslmode=require` 兼容语义。Vercel Production 构建通过 `pnpm vercel:build` 先执行 `pnpm db:deploy`，migration 失败必须阻止发布；Preview 构建不修改生产数据库。
 3. R2 bucket 保持私有，S3 API token 仅授予该 bucket 的对象读写；Vercel 使用 R2 S3 endpoint，`S3_FORCE_PATH_STYLE=false`。
 4. `DEPLOYMENT_MODE=official`、`MAIL_ENABLED=true`、`MAIL_TRANSPORT=http`，并配置邮件 API；同时配置独立的会话、摘要和 worker secret。
 5. Vercel Pro 可直接配置每分钟 Cron。Hobby 不支持该频率，必须部署 `infrastructure/cloudflare-outbox-scheduler`，将同一 `OUTBOX_WORKER_SECRET` 作为 Cloudflare Worker secret 注入，并保持 `* * * * *` Cron Trigger。

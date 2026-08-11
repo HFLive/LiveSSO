@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
+import { BrandMark } from "@/components/brand-mark";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -25,7 +26,7 @@ export default async function Home() {
     <main className="shell">
       <header className="topbar">
         <Link className="brand" href="/" aria-label="HFLive Auth 首页">
-          <span className="brand-mark" aria-hidden="true" />
+          <BrandMark />
           HFLive Auth
         </Link>
         <span className="environment">Live 统一认证系统</span>
