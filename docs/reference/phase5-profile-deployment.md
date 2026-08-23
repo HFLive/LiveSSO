@@ -35,7 +35,7 @@
 2. `DATABASE_URL` 使用 pooled PostgreSQL URL，`DIRECT_DATABASE_URL` 使用 direct URL；Neon 连接串显式使用 `sslmode=verify-full`（保留 Neon 提供的 `channel_binding=require`），避免依赖 `pg` 即将变化的 `sslmode=require` 兼容语义。Vercel Production 构建通过 `pnpm vercel:build` 先执行 `pnpm db:deploy`，migration 失败必须阻止发布；Preview 构建不修改生产数据库。
 3. R2 bucket 保持私有，S3 API token 仅授予该 bucket 的对象读写；Vercel 使用 R2 S3 endpoint，`S3_FORCE_PATH_STYLE=false`。
 4. `DEPLOYMENT_MODE=official`、`MAIL_ENABLED=true`、`MAIL_TRANSPORT=http`，并配置邮件 API；同时配置独立的会话、摘要和 worker secret。
-5. Vercel Pro 可直接配置每分钟 Cron。Hobby 不支持该频率，必须部署 `infrastructure/cloudflare-outbox-scheduler`，将同一 `OUTBOX_WORKER_SECRET` 作为 Cloudflare Worker secret 注入，并保持 `* * * * *` Cron Trigger。
+5. Vercel Pro 可直接配置每分钟 Cron。Hobby 不支持该频率，必须部署 `infrastructure/cloudflare-outbox-scheduler`，将同一 `OUTBOX_WORKER_SECRET` 作为 Cloudflare Worker secret 注入，并保持 `* * * * *` Cron Trigger。再创建 KV namespace `OUTBOX_PENDING` 绑定到 Worker，并在 Vercel 设置 `OUTBOX_WAKE_URL` 为该 Worker 的 HTTPS `/wake`。未绑定 KV 时分钟 Cron 仍会每次打 Auth（旧行为）；绑定后空闲期间不再查询 Neon。
 6. 部署后验证 readiness、邀请邮件、风险 OTP、头像上传/读取、OIDC `picture`、Directory `picture` 和 `user.profile.changed` webhook。
 
 正式验收必须记录实际 deployment URL、migration 结果、R2 对象元数据、邮件 provider 接收结果和完整 OIDC smoke；不能用本地构建替代。
@@ -67,7 +67,7 @@ Vercel 使用框架集成生成函数产物，`DEPLOYMENT_MODE=official` 或平�
 
 `vercel.json` 不登记 Cron，以免 Hobby 部署因每分钟计划被拒绝。Cloudflare Worker 配置位于 `infrastructure/cloudflare-outbox-scheduler/wrangler.jsonc`，生产域名固定为 `https://auth.hsfz.live`。部署 Worker 前先在 Vercel 设置至少 32 字符的 `OUTBOX_WORKER_SECRET`，再把完全相同的值通过 Cloudflare secret 管理注入 Worker；不得把值写入 Wrangler 配置、命令参数、日志或仓库。
 
-Worker 只向 `/api/internal/outbox/dispatch` 发送带 Bearer 鉴权的 HTTPS `POST`。非 2xx 响应只记录状态码并让本次 Cron 失败，不读取响应正文，也不会输出 secret。Cron Trigger 变更可能需要数分钟传播；验收时应检查 Cloudflare invocation 成功以及应用 outbox 状态，而不能只确认 Worker 已部署。
+Worker 向 `/api/internal/outbox/dispatch` 发送带 Bearer 鉴权的 HTTPS `POST`。绑定 `OUTBOX_PENDING` 后，仅在 KV 标记存在（或 6 小时一次兜底）时才发起该请求；应用在写入 outbox 后 `POST /wake` 设置标记。非 2xx 响应只记录状态码并让本次 Cron 失败，不读取失败响应正文，也不会输出 secret。成功响应只解析 `claimed` 计数以决定是否清除标记。Cron Trigger 变更可能需要数分钟传播；验收时应检查 Cloudflare invocation 成功以及空闲时 Neon 可休眠，而不能只确认 Worker 已部署。
 
 ### 2026-08-09 官方生产验收快照
 

@@ -90,7 +90,7 @@ pnpm test:phase5
 
 工作流只使用 GitHub 官方 Action，并固定到完整 commit SHA；`GITHUB_TOKEN` 默认只有 contents read 权限。CI 变量均为 runner 内 disposable 值，禁止把生产 secret 写入 workflow。
 
-事件 worker 端点必须配置至少 32 字符的 `OUTBOX_WORKER_SECRET`；Vercel Cron 也可使用平台注入的 `CRON_SECRET`。自部署需要每分钟以 Bearer token 调用 `/api/internal/outbox/dispatch`。两类 secret 都不能写入日志或接收方配置。
+事件 worker 端点必须配置至少 32 字符的 `OUTBOX_WORKER_SECRET`；Vercel Cron 也可使用平台注入的 `CRON_SECRET`。自部署需要每分钟以 Bearer token 调用 `/api/internal/outbox/dispatch`。官方 Hobby 若要让 Neon 空闲休眠，还需配置 `OUTBOX_WAKE_URL`（Worker `/wake`）并绑定 KV。两类 secret 都不能写入日志或接收方配置。
 
 认证/OIDC 改动还必须针对已登记的测试 client 运行：
 

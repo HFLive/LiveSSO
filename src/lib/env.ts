@@ -39,6 +39,7 @@ const serverSchema = z
     S3_FORCE_PATH_STYLE: booleanString,
     OUTBOX_WORKER_SECRET: z.string().min(32).optional(),
     CRON_SECRET: z.string().min(32).optional(),
+    OUTBOX_WAKE_URL: optionalUrl,
   })
   .superRefine((value, context) => {
     if (value.NODE_ENV === "production" && !value.SECURITY_HASH_SECRET) {
@@ -74,6 +75,24 @@ const serverSchema = z
     }
     if (value.NODE_ENV === "production" && !value.OUTBOX_WORKER_SECRET && !value.CRON_SECRET) {
       context.addIssue({ code: "custom", path: ["OUTBOX_WORKER_SECRET"], message: "Production requires OUTBOX_WORKER_SECRET or Vercel CRON_SECRET for reliable event dispatch." });
+    }
+    if (value.OUTBOX_WAKE_URL) {
+      try {
+        const wake = new URL(value.OUTBOX_WAKE_URL);
+        if (wake.protocol !== "https:" && wake.hostname !== "localhost") {
+          context.addIssue({
+            code: "custom",
+            path: ["OUTBOX_WAKE_URL"],
+            message: "OUTBOX_WAKE_URL must use HTTPS.",
+          });
+        }
+      } catch {
+        context.addIssue({
+          code: "custom",
+          path: ["OUTBOX_WAKE_URL"],
+          message: "OUTBOX_WAKE_URL must be a valid URL.",
+        });
+      }
     }
   });
 

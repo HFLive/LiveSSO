@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { markOutboxPending } from "@/lib/security/outbox-pending";
 import { encryptWebhookSecret } from "@/lib/security/webhook-secret";
 
 export const DIRECTORY_SCOPES = ["directory:user:read", "directory:user:status"] as const;
@@ -231,7 +232,7 @@ export async function updateClientConfiguration(database: PrismaClient, input: {
 
 export async function setUserAccountStatus(database: PrismaClient, input: { actorUserId: string; subjectUserId: string; status: "ACTIVE" | "DISABLED" }) {
   const now = new Date();
-  return database.$transaction(async (transaction) => {
+  const result = await database.$transaction(async (transaction) => {
     const user = await transaction.user.update({ where: { id: input.subjectUserId }, data: { accountStatus: input.status } });
     if (input.status === "DISABLED") await transaction.session.deleteMany({ where: { userId: user.id } });
     const webhooks = await transaction.clientWebhook.findMany({
@@ -250,6 +251,8 @@ export async function setUserAccountStatus(database: PrismaClient, input: { acto
     await transaction.auditEvent.create({
       data: { eventType: "user.status.changed", actorType: "USER", actorUserId: input.actorUserId, subjectUserId: user.id, outcome: "SUCCESS", severity: "CRITICAL", metadata: { status: input.status, deliveryCount: webhooks.length }, expiresAt: new Date(now.getTime() + RETENTION_MS) },
     });
-    return user;
+    return { user, deliveryCount: webhooks.length };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  if (result.deliveryCount > 0) await markOutboxPending();
+  return result.user;
 }

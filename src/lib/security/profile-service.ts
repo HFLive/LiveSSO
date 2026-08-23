@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { deleteProfileObject, putProfileObject } from "@/lib/object-storage";
+import { markOutboxPending } from "@/lib/security/outbox-pending";
 
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 const MAX_SOURCE_DIMENSION = 8_192;
@@ -42,7 +43,7 @@ export async function updateProfileName(
   const now = new Date();
   const changeId = randomUUID();
 
-  return database.$transaction(async (transaction) => {
+  const result = await database.$transaction(async (transaction) => {
     await transaction.$queryRaw(
       Prisma.sql`SELECT "id" FROM "user" WHERE "id" = ${input.userId}::uuid FOR UPDATE`,
     );
@@ -53,7 +54,7 @@ export async function updateProfileName(
     if (!current || current.accountStatus !== "ACTIVE") {
       throw new ProfileNameError("当前账号不能修改显示名。");
     }
-    if (current.name === name) return { name, changed: false };
+    if (current.name === name) return { name, changed: false, deliveryCount: 0 };
 
     await transaction.user.update({
       where: { id: input.userId },
@@ -97,8 +98,10 @@ export async function updateProfileName(
         expiresAt: new Date(now.getTime() + PROFILE_RETENTION_MS),
       },
     });
-    return { name, changed: true };
+    return { name, changed: true, deliveryCount: webhooks.length };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  if (result.deliveryCount > 0) await markOutboxPending();
+  return { name: result.name, changed: result.changed };
 }
 
 export async function replaceProfileImage(database: PrismaClient, input: { userId: string; origin: string; source: Uint8Array }) {
@@ -128,7 +131,8 @@ export async function replaceProfileImage(database: PrismaClient, input: { userI
   }
 
   try {
-    return await database.$transaction(async (transaction) => {
+    let deliveryCount = 0;
+    const active = await database.$transaction(async (transaction) => {
       await transaction.$queryRaw(Prisma.sql`SELECT "id" FROM "user" WHERE "id" = ${input.userId}::uuid FOR UPDATE`);
       const newer = await transaction.profileAsset.findFirst({ where: { userId: input.userId, status: "ACTIVE", version: { gt: pending.version } } });
       if (newer) {
@@ -137,8 +141,8 @@ export async function replaceProfileImage(database: PrismaClient, input: { userI
       }
       const now = new Date();
       await transaction.profileAsset.updateMany({ where: { userId: input.userId, status: "ACTIVE" }, data: { status: "REPLACED" } });
-      const active = await transaction.profileAsset.update({ where: { id: pending.id }, data: { status: "ACTIVE", activatedAt: now } });
-      const image = profileImageUrl(input.origin, input.userId, active.version);
+      const asset = await transaction.profileAsset.update({ where: { id: pending.id }, data: { status: "ACTIVE", activatedAt: now } });
+      const image = profileImageUrl(input.origin, input.userId, asset.version);
       await transaction.user.update({ where: { id: input.userId }, data: { image } });
       const webhooks = await transaction.clientWebhook.findMany({
         where: { active: true, eventTypes: { has: "user.profile.changed" }, client: { disabled: false, approvalStatus: "APPROVED" } },
@@ -148,8 +152,8 @@ export async function replaceProfileImage(database: PrismaClient, input: { userI
         aggregateType: "user",
         aggregateId: input.userId,
         eventType: "user.profile.changed",
-        idempotencyKey: `user-profile:${input.userId}:${active.version}:${webhook.id}`,
-        payload: { webhookId: webhook.id, clientId: webhook.clientId, subject: input.userId, picture: image, version: active.version, occurredAt: now.toISOString() },
+        idempotencyKey: `user-profile:${input.userId}:${asset.version}:${webhook.id}`,
+        payload: { webhookId: webhook.id, clientId: webhook.clientId, subject: input.userId, picture: image, version: asset.version, occurredAt: now.toISOString() },
       } })));
       await transaction.auditEvent.create({ data: {
         eventType: "user.profile.changed",
@@ -157,11 +161,14 @@ export async function replaceProfileImage(database: PrismaClient, input: { userI
         actorUserId: input.userId,
         subjectUserId: input.userId,
         outcome: "SUCCESS",
-        metadata: { field: "picture", version: active.version, deliveryCount: webhooks.length },
+        metadata: { field: "picture", version: asset.version, deliveryCount: webhooks.length },
         expiresAt: new Date(now.getTime() + PROFILE_RETENTION_MS),
       } });
-      return active;
+      deliveryCount = webhooks.length;
+      return asset;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    if (deliveryCount > 0) await markOutboxPending();
+    return active;
   } catch (error) {
     await deleteProfileObject(objectKey).catch(() => undefined);
     await database.profileAsset.updateMany({ where: { id: pending.id, status: "PENDING" }, data: { status: "DELETED", deletedAt: new Date() } }).catch(() => undefined);

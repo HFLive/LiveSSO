@@ -81,4 +81,16 @@ describe("environment contract", () => {
     const { getServerEnv } = await import("./env");
     expect(() => getServerEnv()).toThrow(/S3_ENDPOINT/);
   });
+
+  it("rejects a non-HTTPS outbox wake URL", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DEPLOYMENT_MODE", "self_hosted");
+    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+    vi.stubEnv("BETTER_AUTH_SECRET", "a-secure-secret-that-is-longer-than-32-characters");
+    vi.stubEnv("DATABASE_URL", "postgresql://example.invalid/auth");
+    vi.stubEnv("DIRECT_DATABASE_URL", "postgresql://example.invalid/auth");
+    vi.stubEnv("OUTBOX_WAKE_URL", "http://example.invalid/wake");
+    const { getServerEnv } = await import("./env");
+    expect(() => getServerEnv()).toThrow(/OUTBOX_WAKE_URL/);
+  });
 });

@@ -1,7 +1,7 @@
 # Phase 4 内部应用、Directory API 与事件参考
 
 状态：已实现  
-最后更新：2026-08-09
+最后更新：2026-08-23
 
 ## Client 管理
 
@@ -34,6 +34,8 @@ Phase 4 当前投递：
 管理员为 client 登记 HTTPS webhook（本地/自部署开发可使用 HTTP）。独立 webhook secret 使用 AES-256-GCM 加密保存，只在创建时返回。每个订阅 client 对应独立 `OutboxEvent`，避免一个接收方失败影响其他接收方。
 
 worker 由 `GET|POST /api/internal/outbox/dispatch` 触发，使用 `OUTBOX_WORKER_SECRET` 或 Vercel `CRON_SECRET` Bearer 鉴权。Vercel Pro 可配置每分钟 Cron；Hobby 官方部署使用 `infrastructure/cloudflare-outbox-scheduler` 的 Cloudflare Cron Trigger，以独立 Worker secret 每分钟调用同一端点。自部署也应以该端点配置外部 scheduler。worker 复用 Phase 2 的租约、`FOR UPDATE SKIP LOCKED`、指数退避和 10 次后 dead letter 语义。
+
+官方 Hobby 部署必须避免空转打醒 Neon：写入 `OutboxEvent` 后应用向 Worker `POST /wake`（`OUTBOX_WAKE_URL`，同一 Bearer secret）设置 KV 标记；分钟 Cron 在标记缺失时直接返回，不请求 Auth、不连接 PostgreSQL。未绑定 `OUTBOX_PENDING` KV 时 Worker 保持旧行为（每次都 dispatch），以免漏投递。UTC 每 6 小时第 7 分钟仍强制巡检一次，用于唤醒失败后的兜底。成功响应可读取 `{ claimed }` 以清除标记；失败响应仍不读取正文。
 
 投递请求包含：
 

@@ -1,6 +1,6 @@
 # 开发进度
 
-最后更新：2026-08-11
+最后更新：2026-08-23
 当前阶段：Phase 6/7 生产接入稳定化，继续完善会话复用、资料管理与邀请运营体验
 生产状态：HFLive Auth 核心平台已上线；会话感知首页/登录、个人资料页和可配置邀请有效期已完成本地验证，等待合并后的用户部署
 
@@ -191,7 +191,7 @@ Phase 8 尚未开始：未发送真实成员邀请、未批量关联约 10 个�
 - HFLive Auth 核心基础设施与 LiveBoard Phase 6 后端代码、migration、正式 dev client 和本机真实 OIDC/Directory/Redis 联调已完成；Vercel Production 稳定同源回调和 HFLive outbox 对 LiveBoard 生产 webhook 的真实投递尚未验收，因此不能表述为生产 LiveBoard 已完成切换。
 - LiveBoard Docker PostgreSQL/Redis/MinIO 已运行，真实 Redis `GETDEL` 和 localhost HTTP Cookie 已验证；本轮没有重建 Compose app/migrator 镜像，也没有验证 HTTPS Cookie、Vercel Preview 隔离或 Production 回调。
 - LiveBoard 的 `improveteach.md`、`teach.md` 是任务前已有未跟踪文件；`improveteach.md` 的既有 Prettier 风格使全量 `pnpm validate` 在 format 阶段退出。本轮未修改它们，改为对任务文件执行格式检查并独立完成 typecheck、test 和 build。
-- Vercel Hobby 不支持每分钟原生 Cron；官方 Hobby 部署必须使用仓库内 Cloudflare Worker Cron，且 Vercel 与 Worker 注入相同的独立 `OUTBOX_WORKER_SECRET`。
+- Vercel Hobby 不支持每分钟原生 Cron；官方 Hobby 部署必须使用仓库内 Cloudflare Worker Cron，且 Vercel 与 Worker 注入相同的独立 `OUTBOX_WORKER_SECRET`。空闲休眠还需要 Worker KV `OUTBOX_PENDING` 与 Vercel `OUTBOX_WAKE_URL`；未绑定 KV 时分钟 Cron 仍会每次打醒 Neon。
 - `hsfz.live` 未备案时 EdgeOne 只能选择 `overseas`，不能使用中国大陆节点；静态分发不承诺中国大陆访问速度。
 - 自部署关闭邮件时邀请/恢复不可用，风险登录明确降级为密码登录并记录审计；官方生产禁止关闭邮件。
 - 普通登录用户的 OAuth client 管理权限仍默认全部拒绝；所有 client 变更必须走平台管理员控制面。

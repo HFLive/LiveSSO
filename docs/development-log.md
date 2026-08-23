@@ -760,6 +760,26 @@
 - 根因是异步请求完成后再次读取 React 提交事件的 `currentTarget` 来重置表单；该引用在异步边界后可能失效并抛出前端异常，随后被网络错误兜底捕获。
 - 提交开始时保存真实表单元素，成功响应后通过稳定引用重置表单并显示顶部成功通知。
 
+## 2026-08-23 — Outbox 空闲跳过 Neon
+
+### 目标
+
+- 官方 Hobby 上 Cloudflare 每分钟 outbox Cron 在没有待投递事件时不再连接 Neon，让计算可以休眠。
+
+### 实现
+
+- Worker 增加 `POST /wake` 与可选 KV `OUTBOX_PENDING`：分钟 Cron 在标记缺失时跳过 Auth；UTC 每 6 小时第 7 分钟兜底巡检。
+- 资料改名、头像替换和账号状态变更在写入 outbox 后调用 `markOutboxPending`（`OUTBOX_WAKE_URL`）。
+- 未绑定 KV 时保持每次 dispatch，避免未完成迁移时漏投递。
+
+### 验证
+
+- `pnpm validate`：16 个测试文件、57 项测试通过，5 个文件按环境跳过。
+
+### 遗留事项
+
+- 生产需创建 KV、写入 wrangler binding、配置 `OUTBOX_WAKE_URL` 并重新部署 Worker。
+
 ## 后续记录格式
 
 新增日期条目时使用以下结构，并只写实际发生的内容：

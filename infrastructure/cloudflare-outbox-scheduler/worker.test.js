@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dispatchOutbox } from "./worker.js";
+import {
+  dispatchOutbox,
+  runScheduled,
+  shouldDispatch,
+} from "./worker.js";
 
 const env = {
   AUTH_ORIGIN: "https://auth.hsfz.live",
@@ -12,10 +16,15 @@ afterEach(() => {
 
 describe("Cloudflare outbox scheduler", () => {
   it("dispatches with bearer authentication without following redirects", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ claimed: 1 }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    await dispatchOutbox(env);
+    await expect(dispatchOutbox(env)).resolves.toEqual({ claimed: 1 });
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [target, init] = fetchMock.mock.calls[0];
@@ -47,5 +56,48 @@ describe("Cloudflare outbox scheduler", () => {
 
     await expect(dispatchOutbox(env)).rejects.toThrow("Outbox dispatch failed with HTTP 401.");
     expect(textSpy).not.toHaveBeenCalled();
+  });
+
+  it("skips Neon when the pending flag is absent", async () => {
+    const kv = {
+      get: vi.fn().mockResolvedValue(null),
+      put: vi.fn(),
+      delete: vi.fn(),
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      runScheduled({ ...env, OUTBOX_PENDING: kv }, new Date("2026-08-23T12:00:00.000Z")),
+    ).resolves.toEqual({ skipped: true, claimed: 0 });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(kv.delete).not.toHaveBeenCalled();
+  });
+
+  it("dispatches when the pending flag is set and clears it after an empty claim", async () => {
+    const kv = {
+      get: vi.fn().mockResolvedValue("1"),
+      put: vi.fn(),
+      delete: vi.fn(),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ claimed: 0 }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    await expect(runScheduled({ ...env, OUTBOX_PENDING: kv })).resolves.toEqual({
+      skipped: false,
+      claimed: 0,
+    });
+    expect(kv.delete).toHaveBeenCalledWith("pending");
+  });
+
+  it("keeps dispatching without KV so an unmigrated worker does not drop events", async () => {
+    await expect(shouldDispatch(env)).resolves.toEqual({ reason: "no-kv" });
   });
 });
