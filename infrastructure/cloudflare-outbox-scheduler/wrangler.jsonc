@@ -8,9 +8,12 @@
   "vars": {
     "AUTH_ORIGIN": "https://auth.hsfz.live"
   },
-  // After `npx wrangler kv namespace create OUTBOX_PENDING`, bind the id here
-  // so the minute cron can skip Neon when the pending flag is absent:
-  // "kv_namespaces": [{ "binding": "OUTBOX_PENDING", "id": "<kv-namespace-id>" }],
+  "kv_namespaces": [
+    {
+      "binding": "OUTBOX_PENDING",
+      "id": "a90eda960d2e49d2b645b82fd68ece55"
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
