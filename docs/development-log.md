@@ -821,3 +821,9 @@
 - 首次 build 因本地缺少生产要求的独立安全 secret 失败，注入临时生成的独立测试配置后 `pnpm build` 通过；完整 `pnpm oidc:smoke` 在改名后通过授权码、PKCE、state、nonce、consent、token/claims 断言。
 - Chromium 桌面 1440×1000 与手机 390×844 实测并检查截图：修改保存、重名错误、短用户名拒绝、取消、键盘提交及无页面横向溢出；API 实测未登录 401、非管理员/跨源 403、非法格式 400，无页面运行时异常。
 - 未提交、未发布、未连接生产数据库或更改 LiveBoard；生产 webhook 消费仍待部署后验收。
+
+## 2026-09-26 修复 CI 的 MinIO 镜像拉取
+
+- PR #36 的 GitHub Actions run `36136846285` 中，`validate-and-build` 和 `container-build` 通过，`integration` 在启动依赖时因 Docker Hub 无法拉取 `minio/minio` 失败，尚未执行数据库和认证测试。
+- Compose 的 MinIO server 和 mc 改用 MinIO 官方 Quay 镜像地址，保留现有镜像标签、端口、卷、健康检查与初始化流程。
+- 本地 `docker compose config --quiet`、`pnpm validate`（61 项通过）及 `git diff --check` 通过。本机 Docker daemon 未运行，容器启动与完整集成测试留给 GitHub CI 验证。
