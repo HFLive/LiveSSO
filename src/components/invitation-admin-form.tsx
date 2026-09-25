@@ -21,6 +21,7 @@ export function InvitationAdminForm() {
         return;
       }
       form.reset(); setMessage(`邀请已发送，有效期 ${result.expiresIn ? INVITATION_DURATIONS[result.expiresIn].label : "已设置"}。`);
+      window.dispatchEvent(new Event("hflive:invitation-created"));
     } catch {
       setError("无法连接邀请服务，请检查网络后重试。");
     } finally {

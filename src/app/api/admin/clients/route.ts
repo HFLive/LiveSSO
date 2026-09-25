@@ -13,7 +13,7 @@ const inputSchema = z.object({
   if (value.scopes.some((scope) => ["openid", "profile", "email", "offline_access"].includes(scope)) && value.redirectUris.length === 0) {
     context.addIssue({ code: "custom", path: ["redirectUris"], message: "Login clients require at least one redirect URI." });
   }
-  if (value.redirectUris.some((uri) => new URL(uri).hash)) context.addIssue({ code: "custom", path: ["redirectUris"], message: "Redirect URIs cannot contain fragments." });
+  if (value.redirectUris.some((uri) => URL.canParse(uri) && new URL(uri).hash)) context.addIssue({ code: "custom", path: ["redirectUris"], message: "Redirect URIs cannot contain fragments." });
 });
 
 export async function GET() {

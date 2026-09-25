@@ -10,76 +10,51 @@ export default async function Home() {
   const user = session
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: {
-          name: true,
-          username: true,
-          email: true,
-          image: true,
-          platformRole: true,
-          accountStatus: true,
-        },
+        select: { name: true, username: true, email: true, image: true, platformRole: true, accountStatus: true },
       })
     : null;
   const signedIn = user?.accountStatus === "ACTIVE";
 
   return (
-    <main className="shell">
+    <main className="shell portal-shell">
       <header className="topbar">
-        <Link className="brand" href="/" aria-label="HFLive Auth 首页">
-          <BrandMark />
-          HFLive Auth
-        </Link>
-        <span className="environment">Live 统一认证系统</span>
+        <Link className="brand" href="/" aria-label="HFLive Auth 首页"><BrandMark />HFLive Auth</Link>
+        <span className="environment">账号中心</span>
       </header>
 
-      <section className="hero">
-        <div>
-          <p className="eyebrow">一个 HFLive Auth 账号</p>
-          <h1>安全访问<br />组织应用</h1>
+      <div className="portal-layout">
+        <section className="portal-intro" aria-labelledby="portal-title">
+          <p className="eyebrow">HFLive Auth</p>
+          <h1 id="portal-title">{signedIn ? "欢迎回来。" : "从这里继续。"}</h1>
           <p className="lead">
-            使用同一个账号登录已接入的应用，并在这里集中管理你的个人资料。
+            {signedIn ? "查看和更新你的账号资料。修改后，已连接的应用会使用最新资料。" : "登录你的 HFLive 账号，继续访问组织应用。"}
           </p>
-          {signedIn ? (
-            <div className="signed-in-summary" aria-label="当前登录账号">
-              <span className="signed-in-avatar" aria-hidden="true">
-                {user.image ? <Image src={user.image} alt="" width={38} height={38} unoptimized /> : user.name.slice(0, 1).toUpperCase()}
-              </span>
-              <span>
-                <strong>{user.name}</strong>
-                <small>@{user.username ?? "未设置用户名"} · {user.email}</small>
-              </span>
-            </div>
-          ) : null}
-          <div className="hero-actions">
-            {signedIn ? (
-              <>
-                <a className="primary-button button-link" href="/profile">管理资料</a>
-                {user.platformRole === "ADMIN" ? <a className="secondary-button button-link" href="/admin">管理后台</a> : null}
-              </>
-            ) : (
-              <>
-                <a className="primary-button button-link" href="/sign-in">登录</a>
-                <a className="secondary-button button-link" href="/profile">管理资料</a>
-              </>
-            )}
-          </div>
-        </div>
+        </section>
 
-        <aside className="panel" aria-label="账号说明">
-          <div className="status-row">
-            <span>账号创建</span>
-            <span className="status-value">管理员邀请</span>
-          </div>
-          <div className="status-row">
-            <span>应用接入</span>
-            <span className="status-value">管理员审批</span>
-          </div>
-          <div className="status-row">
-            <span>统一资料</span>
-            <span className="status-value">集中管理</span>
-          </div>
-        </aside>
-      </section>
+        <section className="panel portal-card" aria-label={signedIn ? "当前账号" : "登录入口"}>
+          {signedIn && user ? (
+            <>
+              <div className="portal-account">
+                <span className="signed-in-avatar" aria-hidden="true">
+                  {user.image ? <Image src={user.image} alt="" width={48} height={48} unoptimized /> : user.name.slice(0, 1).toUpperCase()}
+                </span>
+                <div><span className="portal-overline">当前账号</span><strong>{user.name}</strong><small>@{user.username ?? "未设置用户名"} · {user.email}</small></div>
+              </div>
+              <Link className="primary-button button-link" href="/profile">管理个人资料 <span aria-hidden="true">↗</span></Link>
+              {user.platformRole === "ADMIN" ? <Link className="portal-text-link" href="/admin">进入管理后台 <span aria-hidden="true">→</span></Link> : null}
+            </>
+          ) : (
+            <>
+              <span className="portal-overline">已有账号</span>
+              <h2>登录 HFLive Auth</h2>
+              <p>使用用户名或邮箱和密码继续。</p>
+              <Link className="primary-button button-link" href="/sign-in">登录 <span aria-hidden="true">→</span></Link>
+              <Link className="portal-text-link" href="/forgot-password">忘记密码？</Link>
+              <p className="portal-card-footnote">首次使用？请打开管理员发送给你的邀请邮件。</p>
+            </>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

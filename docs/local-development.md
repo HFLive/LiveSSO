@@ -70,6 +70,7 @@ pnpm test:phase4
 pnpm test:phase5
 pnpm test:email-change
 pnpm test:username
+pnpm test:invitations
 ```
 
 `pnpm validate` 依次运行 ESLint、Prisma generate + TypeScript 和 Vitest。
@@ -79,6 +80,8 @@ pnpm test:username
 `pnpm test:phase3` 还需要本地 Mailpit，验证受信设备直登、风险邮件 OTP、challenge 消费、枚举保护、数据库限流与公开注册关闭。
 
 `pnpm test:email-change` 需要已执行全部 migration 的 disposable PostgreSQL，覆盖身份/来源/密码检查、OTP 锁定/过期/单次消费、并发回滚、占用与停用拒绝、邮件失败和资料事件。该测试 mock 邮件发送，不访问生产邮箱。
+
+`pnpm test:invitations` 需要已执行全部 migration 的 disposable PostgreSQL，验证管理员撤回邀请、释放邮箱与用户名预留、旧链接失效及并发终态。该测试不发送邮件。
 
 `pnpm test:phase4` 需要本地 PostgreSQL，验证 client 审批、scope/redirect 拒绝、secret 摘要、Directory M2M token 和签名 outbox 投递。
 

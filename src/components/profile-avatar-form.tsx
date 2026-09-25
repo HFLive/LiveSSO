@@ -161,7 +161,7 @@ export function ProfileAvatarForm({
         <p className="eyebrow">个人资料</p>
         <h1 className="profile-title">{name}</h1>
         <p className="profile-handle">@{profile.username ?? "未设置用户名"}</p>
-        <p className="auth-copy">这些资料用于 HFLive Auth 和已连接的组织应用。</p>
+        <p className="auth-copy">管理你的显示名、邮箱和头像。</p>
       </div>
       <span className="account-status">账号正常</span>
     </div>
@@ -170,7 +170,6 @@ export function ProfileAvatarForm({
       <div className="panel profile-details">
         <div className="section-heading">
           <div><p className="eyebrow">基本资料</p><h2>账号信息</h2></div>
-          <span className="quiet-badge editable">部分可编辑</span>
         </div>
         <dl className="profile-data-list">
           <div className="profile-name-row"><dt>显示名</dt><dd>
@@ -202,13 +201,12 @@ export function ProfileAvatarForm({
           <div><dt>账号类型</dt><dd>{profile.platformRole === "ADMIN" ? "管理员" : "成员"}</dd></div>
           <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
         </dl>
-        <p className="fine-print">显示名、头像和邮箱可由你自行更新；用户名由管理员维护。</p>
+        <p className="fine-print">需要修改用户名？请联系管理员。</p>
       </div>
 
       <div className="panel crop-panel">
         <div className="section-heading">
-          <div><p className="eyebrow">头像</p><h2>更换个人头像</h2></div>
-          <span className="quiet-badge editable">可编辑</span>
+          <div><p className="eyebrow">头像</p><h2>更换头像</h2></div>
         </div>
       {!storageEnabled ? <p className="form-error" role="alert">当前自部署实例未启用对象存储，头像功能不可用。</p> : <>
         <label className="file-picker">选择图片<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => selectFile(event.target.files?.[0])} /></label>

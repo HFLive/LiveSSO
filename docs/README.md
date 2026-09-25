@@ -16,6 +16,7 @@
 | [reference/phase5-profile-deployment.md](./reference/phase5-profile-deployment.md) | Reference   | Phase 5 头像处理、版本化 URL、R2/MinIO 与部署契约                         |
 | [reference/phase6-liveboard-backend.md](./reference/phase6-liveboard-backend.md)   | Reference   | Phase 6 LiveBoard 认证模式、身份映射、状态同步、migration、回滚与验收基线 |
 | [reference/phase7-liveboard-frontend.md](./reference/phase7-liveboard-frontend.md) | Reference   | Phase 7 登录入口、冲突关联、资料归属、可访问性与验收证据                  |
+| [reference/interface-ux.md](./reference/interface-ux.md)                           | Explanation | 认证与管理界面的信息层级、参考项目及文案边界                              |
 | [operations/backup-restore.md](./operations/backup-restore.md)                     | How-to      | PostgreSQL 与头像对象的一致备份、隔离恢复和回滚                           |
 | [../IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md)                             | 路线图      | Phase 0–9 的总体实施基线与验收目标                                        |
 | [../PHASE_1_STATUS.md](../PHASE_1_STATUS.md)                                       | 历史快照    | Phase 1 完成时的不可变验收记录                                            |
