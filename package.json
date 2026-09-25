@@ -29,7 +29,8 @@
     "oidc:smoke": "tsx scripts/oidc-smoke.ts",
     "oidc:smoke:phase4": "tsx scripts/phase4-oidc-smoke.ts",
     "test:username": "RUN_USERNAME_TESTS=true MAIL_ENABLED=false vitest run src/lib/security/username-service.integration.test.ts",
-    "test:email-change": "RUN_EMAIL_CHANGE_TESTS=true vitest run src/lib/security/email-change.integration.test.ts"
+    "test:email-change": "RUN_EMAIL_CHANGE_TESTS=true vitest run src/lib/security/email-change.integration.test.ts",
+    "test:invitations": "RUN_INVITATION_TESTS=true vitest run src/lib/security/invitation-management.integration.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { resolveLoginCallback } from "@/lib/login-callback";
 
 function getFriendlyError(code?: string) {
@@ -25,6 +25,8 @@ export function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,28 +35,33 @@ export function SignInForm() {
 
     const normalizedIdentifier = identifier.trim();
     const callbackURL = resolveLoginCallback(window.location.href);
-    const response = await fetch("/api/auth/hflive/sign-in", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ identifier: normalizedIdentifier, password, callbackURL }),
-    });
-    const result = await response.json().catch(() => ({}));
-
-    setPending(false);
-
-    if (!response.ok) {
-      setError(getFriendlyError(result.code));
-      return;
+    try {
+      const response = await fetch("/api/auth/hflive/sign-in", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ identifier: normalizedIdentifier, password, callbackURL }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(getFriendlyError(result.code));
+        window.requestAnimationFrame(() => errorRef.current?.focus());
+        return;
+      }
+      if (result.challengeRequired) {
+        if (result.url) sessionStorage.setItem("hflive-login-callback", result.url);
+        else sessionStorage.removeItem("hflive-login-callback");
+        router.push("/verify-login");
+        return;
+      }
+      if (result.url) window.location.assign(result.url);
+      else router.replace("/");
+      router.refresh();
+    } catch {
+      setError("无法连接登录服务，请检查网络后重试。");
+      window.requestAnimationFrame(() => errorRef.current?.focus());
+    } finally {
+      setPending(false);
     }
-    if (result.challengeRequired) {
-      if (result.url) sessionStorage.setItem("hflive-login-callback", result.url);
-      else sessionStorage.removeItem("hflive-login-callback");
-      router.push("/verify-login");
-      return;
-    }
-    if (result.url) window.location.assign(result.url);
-    else router.replace("/");
-    router.refresh();
   }
 
   return (
@@ -69,33 +76,36 @@ export function SignInForm() {
           spellCheck={false}
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? "sign-in-error" : undefined}
           required
         />
       </div>
       <div className="field">
-        <label htmlFor="password">密码</label>
-        <input
+        <div className="field-label-row"><label htmlFor="password">密码</label><a href="/forgot-password">忘记密码？</a></div>
+        <div className="password-field"><input
           id="password"
           name="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? "sign-in-error" : undefined}
           minLength={12}
           required
-        />
+        /><button type="button" aria-label={showPassword ? "隐藏密码" : "显示密码"} aria-pressed={showPassword} onClick={() => setShowPassword((current) => !current)}>{showPassword ? "隐藏" : "显示"}</button></div>
       </div>
 
       {error ? (
-        <p className="form-error" role="alert">
+        <p className="form-error" role="alert" id="sign-in-error" ref={errorRef} tabIndex={-1}>
           {error}
         </p>
       ) : null}
 
       <button className="primary-button" type="submit" disabled={pending}>
-        {pending ? "正在验证…" : "继续"}
+        {pending ? "正在登录…" : "登录"}
       </button>
-      <a className="form-link" href="/forgot-password">忘记密码？</a>
     </form>
   );
 }

@@ -1,9 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
-import { auth } from "@/lib/auth";
 import { getSecurityHashSecret, getServerEnv } from "@/lib/env";
 import {
   INVITATION_DURATIONS,
@@ -14,6 +12,8 @@ import { isMailEnabled, sendTransactionalMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { digestSensitiveValue } from "@/lib/security/digest";
 import { expireStaleInvitations } from "@/lib/security/domain-store";
+import { requirePlatformAdmin } from "@/lib/security/admin";
+import { listInvitations } from "@/lib/security/invitation-management";
 
 const inputSchema = z.object({
   email: z.email().max(254),
@@ -25,11 +25,17 @@ class InvitationAccountExistsError extends Error {}
 
 class InvitationReservedError extends Error {}
 
+export async function GET() {
+  const authorization = await requirePlatformAdmin();
+  if ("error" in authorization) return NextResponse.json({ error: authorization.error }, { status: authorization.status });
+  return NextResponse.json({ invitations: await listInvitations(prisma) });
+}
+
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-  const actor = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (actor?.platformRole !== "ADMIN") return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  const authorization = await requirePlatformAdmin();
+  if ("error" in authorization) return NextResponse.json({ error: authorization.error }, { status: authorization.status });
+  if (request.headers.get("origin") !== new URL(request.url).origin) return NextResponse.json({ error: "INVALID_ORIGIN" }, { status: 403 });
+  const actor = authorization.actor;
   if (!isMailEnabled()) return NextResponse.json({ error: "MAIL_DISABLED" }, { status: 503 });
 
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
@@ -96,7 +102,7 @@ export async function POST(request: Request) {
         text: `管理员邀请你创建 HFLive Auth 账号，并为你指定了用户名 ${username}。\n\n请在 ${INVITATION_DURATIONS[duration].label}内打开以下链接设置显示名和密码：\n${url}\n\n此链接只能使用一次。`,
       });
     } catch (error) {
-      await prisma.invitation.update({ where: { id: invitation.id }, data: { status: "REVOKED", revokedAt: new Date() } });
+      await prisma.invitation.updateMany({ where: { id: invitation.id, status: "PENDING" }, data: { status: "REVOKED", revokedAt: new Date() } });
       console.error("Invitation mail delivery failed", {
         cause: error instanceof Error ? error.name : "unknown",
       });

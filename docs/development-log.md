@@ -829,3 +829,19 @@
 - 随后改用公开的 `ghcr.io/coollabsio/minio` 固定发行版与多平台摘要；同一镜像包含 MinIO server 和 `mc`。健康检查改用 `mc ready`，bucket 初始化通过 `MC_HOST_local` 配置连接，不依赖镜像内 shell。
 - 本地 `docker compose config --quiet`、`pnpm validate`（61 项通过）及 `git diff --check` 通过。本机 Docker daemon 未运行，容器启动与完整集成测试留给 GitHub CI 验证。
 - PR #36 run `36167920748` 三项均通过：`integration` 成功启动依赖、初始化 bucket、应用 migration 并完成数据库和认证专项测试；`validate-and-build` 与 `container-build` 同时通过。此结果只验证了 GitHub disposable runner，未在本机或生产自部署环境运行新镜像。
+
+## 2026-09-26 — 邀请管理与主动撤回
+
+- 管理员邀请页增加有效邀请及最近历史列表、刷新和二次确认撤回。列表仅暴露管理字段，不返回邀请 token 或摘要。
+- 新增同源管理员撤回接口；以条件更新在事务内将仍有效的 `PENDING` 邀请置为 `REVOKED` 并写审计，数据库既有部分唯一索引随提交释放邮箱及用户名。服务端拒绝已接受、已过期或重复撤回，并在竞态中保留单次终态。
+- 隔离 PostgreSQL 16 从空库应用现有 8 个 migration；专项测试验证撤回释放预留、旧 token 无法消费、非管理员拒绝、并发只有一次成功。`pnpm validate` 和撤回路由单元测试通过。无 schema 变更。
+- 首次生产构建因本地缺少生产要求的两个独立安全 secret 失败；注入仅用于本地构建的临时配置后 `pnpm build` 通过。真实浏览器以 disposable 管理员和邀请测试数据检查确认、撤回、列表反馈、键盘提交与邮件停用错误；390px 手机宽度及桌面断点无横向溢出，页面无运行时错误。
+
+## 2026-09-26 — 账号入口与管理页信息层级
+
+- 阅读现有页面和安全/产品文档，参考 Clerk Account Portal、Auth0 Universal Login、Atlassian Administration 的任务分层。对应取舍写入 `docs/reference/interface-ux.md`，界面只留下当前操作所需信息。
+- 首页改为按会话显示登录、个人资料或管理后台入口；登录页精简文案，增加密码显示控制与网络错误反馈。后台先呈现应用与成员，添加应用表单按需展开，保留技术参数在管理员编辑区。
+- 错误态检查发现创建应用时无效 redirect URI 被 `superRefine` 中的 `new URL` 抛错变成 500，前端又直接解析非 JSON 响应，按钮卡在“创建中”。改用可解析性保护，并在表单内显示具体的回调地址错误；浏览器复测为可恢复的错误反馈。
+- 最终 `pnpm validate` 63 项通过。初次生产构建因本地缺少独立安全 secret 失败；以仅用于构建的临时值重跑 `pnpm build` 通过。隔离 PostgreSQL 16 的 8 个已有 migration 从空库部署，创建 disposable 管理员，`pnpm oidc:smoke:phase4` 完整授权码 + PKCE、state、nonce、consent 与 claims 回归通过。真实浏览器完成登录并查看首页、后台和资料页；桌面 1280px 与手机 390px 检查布局，表单展开、密码显示和无效地址错误可操作，手机无页面横向溢出。
+- 本次未改认证协议、权限或数据模型；未提交、部署或验证生产界面。
+- PR 准备阶段复跑 `pnpm validate`（63 项通过）和使用临时独立安全配置的 `pnpm build`（通过）；CI `integration` 增加邀请撤回专项测试，验证命令同步到本地开发文档。
