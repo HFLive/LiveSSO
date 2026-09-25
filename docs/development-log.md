@@ -828,3 +828,4 @@
 - 首次改用 MinIO 官方 Quay 镜像，run `36167529333` 的 `integration` 仍在拉取时失败，错误为 `unauthorized`；另外两个 job 通过。
 - 随后改用公开的 `ghcr.io/coollabsio/minio` 固定发行版与多平台摘要；同一镜像包含 MinIO server 和 `mc`。健康检查改用 `mc ready`，bucket 初始化通过 `MC_HOST_local` 配置连接，不依赖镜像内 shell。
 - 本地 `docker compose config --quiet`、`pnpm validate`（61 项通过）及 `git diff --check` 通过。本机 Docker daemon 未运行，容器启动与完整集成测试留给 GitHub CI 验证。
+- PR #36 run `36167920748` 三项均通过：`integration` 成功启动依赖、初始化 bucket、应用 migration 并完成数据库和认证专项测试；`validate-and-build` 与 `container-build` 同时通过。此结果只验证了 GitHub disposable runner，未在本机或生产自部署环境运行新镜像。

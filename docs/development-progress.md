@@ -1,10 +1,15 @@
 # 开发进度
 
-最后更新：2026-09-25
+最后更新：2026-09-26
 当前阶段：Phase 6/7 生产接入稳定化，继续完善会话复用、资料管理与邀请运营体验
 生产状态：HFLive Auth 核心平台已上线；会话感知首页/登录、个人资料页和可配置邀请有效期已完成本地验证，等待合并后的用户部署
 
 本文件是项目当前完成度和下一步的唯一动态状态页。总体阶段定义见 [实施方案](../IMPLEMENTATION_PLAN.md)，Phase 1 的完成时证据见 [历史验收快照](../PHASE_1_STATUS.md)。
+
+## 2026-09-26 CI 修复
+
+- PR #36 的 `integration` 因 Docker Hub MinIO 镜像不可拉取而失败；Quay 镜像也在 runner 上返回 `unauthorized`。Compose 已改用固定摘要的公开 GHCR MinIO 源码构建镜像，server 和 bucket 初始化共用其中的 `mc`。
+- GitHub Actions run `36167920748` 的 `validate-and-build`、`integration`、`container-build` 全部通过；数据库 migration、认证专项与镜像构建均在 disposable runner 完成。生产自部署环境尚未验证新镜像。
 
 ## 2026-09-25 后台用户名修改
 
