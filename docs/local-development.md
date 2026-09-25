@@ -90,7 +90,7 @@ pnpm test:username
 
 - `validate-and-build`：锁定 Node.js 22 与 pnpm 11.7.0，执行 `pnpm validate` 和生产构建。
 - `integration`：启动 disposable PostgreSQL、MinIO、Mailpit，应用 migration 后执行 Phase 2–5 专项测试，并总是删除 CI volume。
-- MinIO server 与 mc 镜像从 `quay.io/minio/` 拉取；Docker Hub 的 `minio/minio` 与 `minio/mc` 仓库已无法在全新 runner 上拉取。
+- MinIO server 与 bucket 初始化共用固定摘要的 `ghcr.io/coollabsio/minio` 镜像；镜像由 Coolify 团队根据 MinIO 源码构建，并包含 `mc`。Docker Hub 的 `minio/minio` 无法拉取，Quay 镜像在 GitHub runner 上返回 `unauthorized`。更新镜像版本与摘要时需重新运行容器集成验证。
 - `container-build`：验证 Compose 配置并实际构建 migrator 与 standalone app 镜像。
 
 工作流只使用 GitHub 官方 Action，并固定到完整 commit SHA；`GITHUB_TOKEN` 默认只有 contents read 权限。CI 变量均为 runner 内 disposable 值，禁止把生产 secret 写入 workflow。

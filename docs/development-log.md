@@ -825,5 +825,6 @@
 ## 2026-09-26 修复 CI 的 MinIO 镜像拉取
 
 - PR #36 的 GitHub Actions run `36136846285` 中，`validate-and-build` 和 `container-build` 通过，`integration` 在启动依赖时因 Docker Hub 无法拉取 `minio/minio` 失败，尚未执行数据库和认证测试。
-- Compose 的 MinIO server 和 mc 改用 MinIO 官方 Quay 镜像地址，保留现有镜像标签、端口、卷、健康检查与初始化流程。
+- 首次改用 MinIO 官方 Quay 镜像，run `36167529333` 的 `integration` 仍在拉取时失败，错误为 `unauthorized`；另外两个 job 通过。
+- 随后改用公开的 `ghcr.io/coollabsio/minio` 固定发行版与多平台摘要；同一镜像包含 MinIO server 和 `mc`。健康检查改用 `mc ready`，bucket 初始化通过 `MC_HOST_local` 配置连接，不依赖镜像内 shell。
 - 本地 `docker compose config --quiet`、`pnpm validate`（61 项通过）及 `git diff --check` 通过。本机 Docker daemon 未运行，容器启动与完整集成测试留给 GitHub CI 验证。
