@@ -6,6 +6,7 @@ import { getServerEnv, getTrustedOrigins } from "@/lib/env";
 import { sendSecurityNotice, sendTransactionalMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { riskAuthPlugin } from "@/lib/risk-auth-plugin";
+import { profileEmailPlugin } from "@/lib/profile-email-plugin";
 
 const env = getServerEnv();
 const OAUTH_SCOPES = [
@@ -44,6 +45,10 @@ export const auth = betterAuth({
       });
     },
     onPasswordReset: async ({ user }) => {
+      await prisma.emailChangeRequest.updateMany({
+        where: { userId: user.id, status: "PENDING" },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
+      });
       await sendSecurityNotice(user.email, "你的 HFLive Auth 密码已重置，其他会话已撤销。" ).catch(() => undefined);
     },
   },
@@ -69,6 +74,7 @@ export const auth = betterAuth({
   },
   plugins: [
     riskAuthPlugin(),
+    profileEmailPlugin(),
     username({
       minUsernameLength: 3,
       maxUsernameLength: 32,

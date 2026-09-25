@@ -147,6 +147,80 @@ export async function recordLoginChallengeFailure(
   return rows[0] ?? null;
 }
 
+export async function expireStaleEmailChangeRequests(
+  database: DatabaseClient,
+  now = new Date(),
+) {
+  const result = await database.emailChangeRequest.updateMany({
+    where: { status: "PENDING", expiresAt: { lte: now } },
+    data: { status: "EXPIRED" },
+  });
+
+  return result.count;
+}
+
+export async function consumeEmailChangeRequest(
+  database: DatabaseClient,
+  input: { id: string; userId: string; otpDigest: string; now?: Date },
+) {
+  const now = input.now ?? new Date();
+  const result = await database.emailChangeRequest.updateMany({
+    where: {
+      id: input.id,
+      userId: input.userId,
+      otpDigest: input.otpDigest,
+      status: "PENDING",
+      expiresAt: { gt: now },
+      attemptCount: { lt: database.emailChangeRequest.fields.maxAttempts },
+      consumedAt: null,
+      cancelledAt: null,
+    },
+    data: {
+      status: "CONSUMED",
+      consumedAt: now,
+    },
+  });
+
+  return result.count === 1;
+}
+
+export async function recordEmailChangeFailure(
+  database: DatabaseClient,
+  input: { id: string; userId: string; now?: Date },
+) {
+  const now = input.now ?? new Date();
+  const rows = await database.$queryRaw<Array<{ attemptCount: number; status: "PENDING" | "LOCKED" }>>(Prisma.sql`
+    UPDATE "emailChangeRequest"
+       SET "attemptCount" = "attemptCount" + 1,
+           "status" = CASE
+             WHEN "attemptCount" + 1 >= "maxAttempts" THEN 'LOCKED'::"EmailChangeStatus"
+             ELSE 'PENDING'::"EmailChangeStatus"
+           END,
+           "updatedAt" = ${now}
+     WHERE "id" = ${input.id}::uuid
+       AND "userId" = ${input.userId}::uuid
+       AND "status" = 'PENDING'::"EmailChangeStatus"
+       AND "expiresAt" > ${now}
+       AND "attemptCount" < "maxAttempts"
+     RETURNING "attemptCount", "status"
+  `);
+
+  return rows[0] ?? null;
+}
+
+export async function cancelPendingEmailChangeRequests(
+  database: DatabaseClient,
+  input: { userId: string; now?: Date },
+) {
+  const now = input.now ?? new Date();
+  const result = await database.emailChangeRequest.updateMany({
+    where: { userId: input.userId, status: "PENDING", cancelledAt: null },
+    data: { status: "CANCELLED", cancelledAt: now },
+  });
+
+  return result.count;
+}
+
 export type ClaimedOutboxEvent = OutboxEvent & { leaseId: string };
 
 export async function claimOutboxEvents(

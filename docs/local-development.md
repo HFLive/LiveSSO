@@ -68,6 +68,8 @@ pnpm test:db
 pnpm test:phase3
 pnpm test:phase4
 pnpm test:phase5
+pnpm test:email-change
+pnpm test:username
 ```
 
 `pnpm validate` 依次运行 ESLint、Prisma generate + TypeScript 和 Vitest。
@@ -75,6 +77,8 @@ pnpm test:phase5
 `pnpm test:db` 需要本地 PostgreSQL，验证 Phase 2 一次性消费和 outbox 并发租约。数据库结构改动后应同时运行该命令。
 
 `pnpm test:phase3` 还需要本地 Mailpit，验证受信设备直登、风险邮件 OTP、challenge 消费、枚举保护、数据库限流与公开注册关闭。
+
+`pnpm test:email-change` 需要已执行全部 migration 的 disposable PostgreSQL，覆盖身份/来源/密码检查、OTP 锁定/过期/单次消费、并发回滚、占用与停用拒绝、邮件失败和资料事件。该测试 mock 邮件发送，不访问生产邮箱。
 
 `pnpm test:phase4` 需要本地 PostgreSQL，验证 client 审批、scope/redirect 拒绝、secret 摘要、Directory M2M token 和签名 outbox 投递。
 
@@ -151,3 +155,7 @@ Compose 内 app 默认通过 `http://minio:9000` 访问对象存储。宿主机 
 ### Compose app 没有启动
 
 查看 `migrate` 容器退出码和日志。app 被设计为只在 migration 成功后启动，不应跳过该依赖。
+
+### 用户名修改专项验证
+
+`pnpm test:username` 使用已迁移的 disposable PostgreSQL，关闭邮件发送，验证管理员权限、格式、大小写重名、邀请预留/过期、并发争用、审计/资料事件，以及旧用户名拒绝、新用户名与邮箱登录。CI integration job 执行该套件。后台 UI 还需检查桌面/手机编辑、保存、取消、错误提示与键盘操作；认证改动继续运行完整 `pnpm oidc:smoke`。

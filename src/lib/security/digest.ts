@@ -7,6 +7,7 @@ export type DigestPurpose =
   | "trusted-device-token"
   | "login-challenge-binding"
   | "login-otp"
+  | "email-change-otp"
   | "ip-address"
   | "user-agent";
 

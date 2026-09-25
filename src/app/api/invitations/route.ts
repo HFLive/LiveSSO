@@ -21,6 +21,8 @@ const inputSchema = z.object({
   expiresIn: z.enum(["2h", "1d", "7d", "30d"]).default("7d"),
 });
 
+class InvitationAccountExistsError extends Error {}
+
 class InvitationReservedError extends Error {}
 
 export async function POST(request: Request) {
@@ -41,20 +43,14 @@ export async function POST(request: Request) {
   const rawToken = randomBytes(32).toString("base64url");
 
   try {
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
+    const invitation = await prisma.$transaction(async (transaction) => {
+      const existingUser = await transaction.user.findFirst({
+        where: { OR: [
           { email: { equals: email, mode: "insensitive" } },
           { username: { equals: normalizedUsername, mode: "insensitive" } },
-        ],
-      },
-      select: { id: true },
-    });
-    if (existingUser) {
-      return NextResponse.json({ error: "ACCOUNT_EXISTS" }, { status: 409 });
-    }
-
-    const invitation = await prisma.$transaction(async (transaction) => {
+        ] }, select: { id: true },
+      });
+      if (existingUser) throw new InvitationAccountExistsError();
       await expireStaleInvitations(transaction, now);
       const reserved = await transaction.invitation.findFirst({
         where: {
@@ -90,7 +86,7 @@ export async function POST(request: Request) {
         },
       });
       return created;
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     const url = new URL("/accept-invitation", getServerEnv().BETTER_AUTH_URL);
     url.searchParams.set("token", `${invitation.id}.${rawToken}`);
     try {
@@ -111,9 +107,10 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof InvitationAccountExistsError) return NextResponse.json({ error: "ACCOUNT_EXISTS" }, { status: 409 });
     if (
       error instanceof InvitationReservedError ||
-      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
+      (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code))
     ) {
       return NextResponse.json({ error: "INVITATION_PENDING" }, { status: 409 });
     }

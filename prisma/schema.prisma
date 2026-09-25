@@ -32,6 +32,14 @@ enum LoginChallengeStatus {
   EXPIRED
 }
 
+enum EmailChangeStatus {
+  PENDING
+  CONSUMED
+  LOCKED
+  CANCELLED
+  EXPIRED
+}
+
 enum AuditActorType {
   USER
   CLIENT
@@ -92,6 +100,7 @@ model User {
   invitationsAccepted Invitation[]        @relation("InvitationAcceptor")
   trustedDevices      TrustedDevice[]
   loginChallenges     LoginChallenge[]
+  emailChangeRequests EmailChangeRequest[]
   profileAssets       ProfileAsset[]
   clientsApproved     OauthClient[]       @relation("OauthClientApprover")
 
@@ -166,6 +175,32 @@ model LoginChallenge {
   @@index([userId, status])
   @@index([status, expiresAt])
   @@map("loginChallenge")
+}
+
+// 一条记录代表一次自助邮箱更改：OTP 只保存用途隔离摘要，
+// 确认时与用户表更新、outbox 和审计在同一事务内完成。
+// 每个用户同一时刻只允许一条 PENDING（见部分唯一索引）。
+model EmailChangeRequest {
+  id              String            @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  userId          String            @db.Uuid
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newEmail        String
+  otpDigest       String            @db.VarChar(80)
+  status          EmailChangeStatus @default(PENDING)
+  attemptCount    Int               @default(0)
+  maxAttempts     Int               @default(5)
+  ipDigest        String?           @db.VarChar(80)
+  userAgentDigest String?           @db.VarChar(80)
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([newEmail, status])
+  @@index([status, expiresAt])
+  @@map("emailChangeRequest")
 }
 
 model AuditEvent {

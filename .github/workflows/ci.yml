@@ -80,6 +80,8 @@ jobs:
           pnpm test:phase3
           pnpm test:phase4
           pnpm test:phase5
+          pnpm test:email-change
+          pnpm test:username
       - name: Show dependency logs on failure
         if: failure()
         run: docker compose logs --no-color postgres minio mailpit

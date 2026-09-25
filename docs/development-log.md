@@ -797,3 +797,27 @@
 
 ### 遗留事项
 ```
+
+
+## 2026-09-25 自助更改邮箱
+
+- 接续已有未提交的 EmailChangeRequest schema、domain-store、摘要用途及邮箱服务/插件草稿，补齐 Better Auth 插件注册、个人资料表单、迁移和 CI 专项测试。
+- 发起时验证当前密码，向新邮箱发送 10 分钟验证码；5 次错误锁定，支持取消与刷新恢复。占用原因统一隐藏，保持原邮箱直至验证完成。
+- 修正草稿中消费 OTP 后才启动更新事务的问题；现将消费、最终占用检查、邮箱验证状态、credential accountId、审计与资料 outbox 原子提交，并测试并发至多一次成功和冲突回滚。
+- 更改后取消旧邮箱的待处理登录 challenge 与密码恢复凭据；密码重置取消待处理邮箱更改。现有会话和已签发 JWT 到期策略不变，不改变 issuer/sub/角色或自动关联应用账号。
+- 验证：`pnpm validate` 57 项通过，邮箱真实 PostgreSQL 专项 6 项通过；`pnpm build` 通过。`pnpm oidc:smoke:phase4` 创建 disposable client/user 并执行完整 `oidc-smoke.ts`，authorization code、PKCE、state、nonce、consent、token/claims 通过。
+- 新增 migration 在空库以及 7 个旧 migration 的已有库通过 `prisma migrate deploy`。本机 Docker 缺少可运行入口，因此使用仅监听本机 55439 的隔离 PostgreSQL 16；未改动生产数据库或其他项目服务。
+- 测试覆盖未登录/跨源/密码拒绝、验证码摘要/过期/锁定/替换/取消/重复消费、邮箱占用、停用账号、邮件失败、数据库限流、旧/新邮箱登录以及审计/outbox。邮件使用 mock 或本机 HTTP 接收器，无真实邮件外发。
+- 变更保留在本地 `codex/profile-email-change` 分支，未提交或发布；生产迁移、邮件和接入方 webhook 仍需部署验收。
+- Chromium 桌面 1280×900 和手机 390×844 实测通过：真实登录 OTP、当前密码错误、新邮箱 OTP 错误、键盘 Tab/Enter、刷新恢复、成功后资料读回与取消，无页面横向溢出或运行时异常。视觉复核后复用现有输入框/焦点样式，移动输入保持 16px。
+
+
+## 2026-09-25 后台修改登录用户名
+
+- 用户明确需求为登录用户名；新增后台每行编辑表单、保存/取消/中文错误反馈，内部 UUID 和 OIDC subject 不变。
+- 新增用户名服务与管理员 PATCH 分支：3–32 位字母/数字/下划线、小写规范化、用户与有效邀请的大小写不敏感占用检查、权限复核、同源校验、事务审计及资料 outbox。邀请创建的用户占用检查移入 Serializable 事务，覆盖与改名的并发分配。
+- 新增 4 项路由回归测试、5 项真实数据库专项与 `pnpm test:username`/CI 接入。验证 `pnpm validate` 61 项通过、专项 5 项通过，旧用户名拒绝、新用户名/邮箱登录及并发至多一个成功。
+- 本机 Docker 未运行，使用 `/tmp` 内隔离 PostgreSQL 16（仅本机 55432）；全部 8 个已有 migration 正常应用，无新增迁移。测试初版因试图删除保留期内审计及无效邀请时间戳失败，修正测试夹具后通过，未放宽数据库约束。
+- 首次 build 因本地缺少生产要求的独立安全 secret 失败，注入临时生成的独立测试配置后 `pnpm build` 通过；完整 `pnpm oidc:smoke` 在改名后通过授权码、PKCE、state、nonce、consent、token/claims 断言。
+- Chromium 桌面 1440×1000 与手机 390×844 实测并检查截图：修改保存、重名错误、短用户名拒绝、取消、键盘提交及无页面横向溢出；API 实测未登录 401、非管理员/跨源 403、非法格式 400，无页面运行时异常。
+- 未提交、未发布、未连接生产数据库或更改 LiveBoard；生产 webhook 消费仍待部署后验收。
