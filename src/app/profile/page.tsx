@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ProfileAvatarForm } from "@/components/profile-avatar-form";
+import { ProfileEmailForm } from "@/components/profile-email-form";
+import { getPendingEmailChange } from "@/lib/security/email-change-service";
 import { auth } from "@/lib/auth";
 import { getServerEnv } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
@@ -30,6 +32,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     },
   });
   if (user?.accountStatus !== "ACTIVE") redirect("/error?code=forbidden");
+  const pendingEmail = await getPendingEmailChange(prisma, session.user.id);
   return (
     <main className="profile-shell">
       <ProfileAvatarForm
@@ -46,6 +49,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         returnTo={returnTo}
         returnAppName={returnTarget?.appName}
       />
+      <ProfileEmailForm mailEnabled={getServerEnv().MAIL_ENABLED} initialPending={pendingEmail ? { newEmail: pendingEmail.newEmail, expiresAt: pendingEmail.expiresAt.toISOString() } : null} />
     </main>
   );
 }

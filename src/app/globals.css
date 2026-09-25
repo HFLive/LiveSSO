@@ -297,6 +297,7 @@ h1 {
 }
 
 .field input,
+.email-change-form input,
 .field select {
   width: 100%;
   height: 46px;
@@ -309,6 +310,7 @@ h1 {
 }
 
 .field input:focus,
+.email-change-form input:focus,
 .field select:focus {
   border-color: var(--line-strong);
   box-shadow: 0 0 0 3px rgba(157, 245, 173, 0.08);
@@ -564,3 +566,19 @@ h1 {
     font-size: clamp(48px, 15vw, 70px);
   }
 }
+
+.email-change-panel { margin-top: 1.5rem; min-width: 0; overflow-wrap: anywhere; }
+.email-change-form { display: grid; gap: .75rem; max-width: 32rem; margin-top: 1rem; }
+.email-change-form input { width: 100%; min-width: 0; font-size: 16px; }
+.email-change-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+
+.email-change-form label { color: #c6cdc7; font-size: 13px; }
+.email-change-form > .fine-print { margin-top: 0; }
+.email-change-actions .primary-button { flex: 1; width: auto; margin-top: 0; }
+.email-change-actions .secondary-button { padding: 0 18px; }
+
+.username-editor { display: grid; gap: 0.5rem; min-width: 10rem; max-width: 22rem; white-space: normal; }
+.username-editor > button { justify-self: start; }
+.username-editor form { display: grid; gap: 0.5rem; }
+.username-editor input { width: 100%; min-width: 0; }
+.username-editor small { white-space: normal; }

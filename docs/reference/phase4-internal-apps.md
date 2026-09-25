@@ -1,7 +1,7 @@
 # Phase 4 内部应用、Directory API 与事件参考
 
 状态：已实现  
-最后更新：2026-08-23
+最后更新：2026-09-25
 
 ## Client 管理
 
@@ -57,3 +57,14 @@ pnpm test:phase4
 ```
 
 真实 PostgreSQL 测试覆盖：secret 仅存摘要、consent 应用名称解析、越权 scope 拒绝、未审批 client 拒绝、错误 redirect URI 不进入登录、M2M Directory 状态查询，以及签名 outbox 的单次完成。
+
+## 管理员修改登录用户名
+
+- `/admin` → 用户管理 → 修改用户名。只允许有效平台管理员操作，可修改自己或其他成员的登录用户名。
+- `PATCH /api/admin/users/{userId}` 接受 `{ "username": "new_username" }`，与 `{ "accountStatus": "ACTIVE" }` 是互斥操作；请求必须提供与请求 URL 同源的 `Origin`。额外字段被拒绝。
+- 去除首尾空白后，用户名必须为 3–32 位 ASCII 字母、数字或下划线。`username` 小写存储，`displayUsername` 保留输入大小写；仅大小写变化视为无操作。
+- 大小写不敏感检查其他用户及未到期 PENDING 邀请。用户名修改和邀请创建均在 Serializable 事务内读写占用状态，避免并发分配；唯一冲突和序列化冲突返回 409，后者提示重试。
+- 返回 400（格式/请求错误）、401（未登录）、403（权限/来源错误）、404（用户不存在）、409（占用或并发冲突）、500（其他写入失败）。成功返回 `id`、规范化 `username` 和 `changed`。
+- 修改原子写入 `user.username.changed` 管理员审计及面向有效订阅的 `user.profile.changed` outbox。事件 subject 始终是原 UUID，payload 包含 `preferred_username`；接入方继续以 Directory 的 `preferredUsername` 读取权威资料。
+- 原用户名不再登录该账号，邮箱与密码不变；旧用户名可被重新分配。issuer/sub、现有会话、token TTL、JWKS、权限及外部身份映射不变。已签发 token 的用户名保持到过期，新签发 claims 读取新值。
+- 无 schema 或 migration 变更。代码回滚不会回滚已修改用户名；需要时由管理员再次改回未占用的原用户名。事件生产与接入方实际消费仍须分别验收。

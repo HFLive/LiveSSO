@@ -51,6 +51,10 @@ OIDC token 不携带 LiveBoard 管理员或业务角色。接入应用必须依�
 | LiveBoard member/admin/super_admin | LiveBoard    |
 | 课堂、内容、通知和其他业务数据     | 对应接入应用 |
 
+邮箱更改由本人会话、当前密码和新邮箱验证码授权；验证完成才更新全局邮箱并发布资料事件。邮箱变化不改变 `sub`，也不触发接入应用的自动账号关联。
+
+平台管理员可以更改登录用户名，按 3–32 位 ASCII 字母、数字或下划线校验并转为小写保存，同时检查用户及有效邀请的占用。修改与审计、资料 outbox 在同一事务提交；用户 UUID、OIDC `sub`、账号权限及会话不变。已签发 JWT 中的旧用户名可保留至到期，新签发 claims 与 Directory 读取新值。
+
 LiveBoard 将在 Phase 6 以 `(issuer, subject)` 建立 `ExternalIdentity`。用户名或邮箱冲突不得自动合并；需要旧账号密码证明或管理员人工关联。JIT 只能创建普通成员，不能提升管理员权限。
 
 ## 数据与运行状态

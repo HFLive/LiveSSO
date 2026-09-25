@@ -202,7 +202,7 @@ export function ProfileAvatarForm({
           <div><dt>账号类型</dt><dd>{profile.platformRole === "ADMIN" ? "管理员" : "成员"}</dd></div>
           <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
         </dl>
-        <p className="fine-print">显示名和头像可由你自行更新；用户名和邮箱由管理员维护。</p>
+        <p className="fine-print">显示名、头像和邮箱可由你自行更新；用户名由管理员维护。</p>
       </div>
 
       <div className="panel crop-panel">

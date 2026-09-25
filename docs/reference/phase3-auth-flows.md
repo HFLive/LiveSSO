@@ -56,3 +56,16 @@ pnpm oidc:smoke
 ```
 
 `test:phase3` 需要 PostgreSQL 和 Mailpit，覆盖受信设备直登、新设备邮件 OTP、challenge 单次消费、账号枚举响应一致、数据库暴力尝试限流和公开注册关闭。
+
+## 自助更改邮箱
+
+- `/profile` 提供新邮箱、当前密码与验证码表单，可取消或刷新后继续待验证请求；未启用邮件时不提供更改入口。
+- `POST /api/auth/hflive/profile/email/request` 只接受本人有效会话，使用 Better Auth 校验当前密码。地址去空白、转小写并验证格式，拒绝与当前相同、已使用或仍在邀请/验证中的邮箱；外部占用错误统一返回 `EMAIL_UNAVAILABLE`，不说明是哪类占用。
+- 新邮箱收到 6 位随机验证码，有效期 10 分钟，最多 5 次错误尝试。数据库只保存绑定 user ID 的用途隔离 HMAC 摘要。请求成功前不更改原邮箱；重新发起会取消旧请求，发送失败会取消本次请求。
+- `POST /api/auth/hflive/profile/email/confirm` 接受 `otp`。账号必须保持 ACTIVE；原子消费、最终占用检查、邮箱及 `emailVerified=true`、credential accountId、审计和 `user.profile.changed` outbox 在同一 Serializable 事务提交。冲突时回滚消费；并发提交至多一次成功。接入应用依据事件重新读取 Directory。
+- `POST /api/auth/hflive/profile/email/cancel` 取消本人的待处理请求。三类端点沿用 Better Auth 的来源验证和数据库限流：请求每 IP 每 10 分钟 5 次，确认/取消各 15 次。另由请求记录限制验证码错误次数。
+- 更改成功取消旧邮箱的待处理登录 challenge 和现有密码恢复凭据，并尝试向旧邮箱发送安全提醒；提醒发送失败不回滚已完成的更改。密码重置成功会取消尚未确认的邮箱更改。
+- `EmailChangeRequest` 的部分唯一索引约束每用户、每个小写目标邮箱至多一条 PENDING；过期请求在发起新请求时释放。迁移必须先于应用发布执行。
+- 身份 `sub`、用户名、角色、issuer、JWKS 和 token TTL 不变，不按新邮箱自动合并任何应用账号。现有会话继续有效；已有 JWT 的邮箱快照保留至原到期时间，新 token 和 Directory 读取更新后的资料。回滚代码时保留新增表与已更新邮箱，不能将已验证的新地址自动还原。
+
+专项验证：`pnpm test:email-change`（需要 disposable PostgreSQL；邮件发送在集成测试中被替换为可断言的本地 mock）。浏览器验收使用本地 HTTP 邮件接收器，无真实邮件外发。
