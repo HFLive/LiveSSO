@@ -445,6 +445,7 @@ h1 {
 }
 
 .profile-shell { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 88px; }
+.profile-identity-meta { margin-left: .45em; color: var(--muted); font-size: .44em; font-weight: 500; overflow-wrap: anywhere; vertical-align: baseline; }
 .profile-page { display: grid; gap: 20px; }
 .profile-page-header { display: flex; align-items: center; justify-content: space-between; min-height: 52px; margin-bottom: 6px; }
 .profile-return-link { display: grid; gap: 2px; min-width: 150px; text-align: right; }
@@ -531,6 +532,7 @@ h1 {
 .portal-account > div { min-width: 0; }
 .portal-account strong, .portal-account small { display: block; }
 .portal-account strong { margin-top: 4px; font-size: 18px; }
+.portal-identity-meta { margin-left: .3em; color: var(--muted); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .portal-account small { max-width: 310px; margin-top: 4px; overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
 .auth-entry { align-content: center; gap: 20px; }

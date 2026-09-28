@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ authorize: vi.fn(), update: vi.fn(), status: vi.fn() }));
+const mocks = vi.hoisted(() => ({ authorize: vi.fn(), update: vi.fn(), details: vi.fn(), status: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 vi.mock("@/lib/security/admin", () => ({ requirePlatformAdmin: mocks.authorize }));
 vi.mock("@/lib/security/client-service", () => ({ setUserAccountStatus: mocks.status }));
 vi.mock("@/lib/security/username-service", async (original) => ({ ...await original<object>(), updateUsername: mocks.update }));
+vi.mock("@/lib/security/identity-details-service", async (original) => ({ ...await original<object>(), updateIdentityDetails: mocks.details }));
 import { PATCH } from "./route";
 import { UsernameUpdateError } from "@/lib/security/username-service";
 const userId = "a097e9c4-1bb0-42d9-9bba-c94d272f3c24";
@@ -33,5 +34,13 @@ describe("admin user PATCH", () => {
   it("retains the self-disable guard", async () => {
     expect((await patch({ accountStatus: "DISABLED" })).status).toBe(409);
     expect(mocks.status).not.toHaveBeenCalled();
+  });
+  it("accepts only administrator identity details and permits clearing them", async () => {
+    mocks.details.mockResolvedValue({ id: userId, identityLabel: null, realName: null, changed: true });
+    expect((await patch({ identityLabel: null, realName: null })).status).toBe(200);
+    expect(mocks.details).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ userId, identityLabel: null, realName: null }));
+    expect((await patch({ identityLabel: "教师", realName: "张老师", accountStatus: "ACTIVE" })).status).toBe(400);
+    expect((await patch({ identityLabel: "教\n师", realName: null })).status).toBe(400);
+    expect((await patch({ identityLabel: "x".repeat(41), realName: null })).status).toBe(400);
   });
 });

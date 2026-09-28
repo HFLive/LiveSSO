@@ -2,6 +2,13 @@
 
 本文件按日期追加已经发生的开发事实、关键问题和验证结果。当前状态不要从日志推断，应读取 [development-progress.md](./development-progress.md)。
 
+## 2026-09-28 — 联合身份展示
+
+- 新增管理员设置的可选身份标签和真名、迁移、管理界面及资料页展示；Directory 扩展这两个字段，资料变更通过可靠 outbox 通知接入应用重新读取。
+- 隔离 PostgreSQL 16 上从空库应用 9 项 migration 成功；`pnpm validate` 通过 64 项单元测试，管理员资料/用户名集成测试 6 项、Directory 集成测试 6 项通过；临时独立安全配置下 `pnpm build` 和完整 OIDC 授权码 smoke 通过。
+- 本机真实浏览器用 disposable 管理员验证管理表单以 Enter 保存标签、资料页读取更新值，390px 与 1280px 资料页无横向溢出；该验证不代表生产同步已完成。
+- 本地 PostgreSQL 首次连接缺少显式用户名导致 Prisma schema engine 报空错误，补入本机 disposable 用户后成功；未使用生产数据库。
+
 ## 2026-08-09 — Phase 0/1 初始化
 
 ### 方向确认

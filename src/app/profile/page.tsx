@@ -23,6 +23,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     select: {
       name: true,
       username: true,
+      identityLabel: true,
+      realName: true,
       email: true,
       emailVerified: true,
       image: true,
@@ -39,6 +41,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         profile={{
           name: user.name,
           username: user.username,
+          identityLabel: user.identityLabel,
+          realName: user.realName,
           email: user.email,
           emailVerified: user.emailVerified,
           platformRole: user.platformRole,

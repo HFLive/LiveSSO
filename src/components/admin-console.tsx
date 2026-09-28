@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { AdminUsernameForm } from "./admin-username-form";
+import { AdminIdentityDetailsForm } from "./admin-identity-details-form";
 import { useState, type FormEvent } from "react";
 
 type Client = { clientId: string; name: string | null; disabled: boolean | null; scopes: string[]; redirectUris: string[]; webhooks: Array<{ endpointUrl: string; active: boolean; eventTypes: string[] }> };
 type WebhookStatus = { counts: { pending: number; processing: number; deadLetter: number; delivered: number }; recentFailures: Array<{ id: string; eventType: string; attemptCount: number; lastErrorCode: string | null; updatedAt: string | Date }> };
-type User = { id: string; name: string; username: string | null; email: string; platformRole: string; accountStatus: "ACTIVE" | "DISABLED" };
+type User = { id: string; name: string; username: string | null; identityLabel: string | null; realName: string | null; email: string; platformRole: string; accountStatus: "ACTIVE" | "DISABLED" };
 type Event = { id: string; eventType: string; outcome: string; severity: string; clientId: string | null; createdAt: string | Date };
 const auditTimeFormatter = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
@@ -102,7 +103,7 @@ export function AdminConsole({ initialClients, initialUsers, initialEvents, init
       </details>
 
     </section>
-    <section className="panel admin-section" id="members"><div className="admin-section-heading"><h2>成员</h2><a href="/admin/invitations">查看邀请 →</a></div><div className="table-wrap"><table><thead><tr><th>成员</th><th>登录用户名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.name}<small>{user.email}</small></td><td><AdminUsernameForm userId={user.id} username={user.username} onUpdated={(username) => setUsers((current) => current.map((item) => item.id === user.id ? { ...item, username } : item))} /></td><td>{user.platformRole === "ADMIN" ? "管理员" : "成员"}</td><td><span className={user.accountStatus === "ACTIVE" ? "badge" : "badge danger"}>{user.accountStatus === "ACTIVE" ? "正常" : "已停用"}</span></td><td><button onClick={() => userAction(user.id, user.accountStatus === "ACTIVE" ? "DISABLED" : "ACTIVE")}>{user.accountStatus === "ACTIVE" ? "停用" : "恢复"}</button></td></tr>)}</tbody></table></div></section>
+    <section className="panel admin-section" id="members"><div className="admin-section-heading"><h2>成员</h2><a href="/admin/invitations">查看邀请 →</a></div><div className="table-wrap"><table><thead><tr><th>成员</th><th>登录用户名</th><th>身份资料</th><th>角色</th><th>状态</th><th>操作</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.name}<small>{user.email}</small></td><td><AdminUsernameForm userId={user.id} username={user.username} onUpdated={(username) => setUsers((current) => current.map((item) => item.id === user.id ? { ...item, username } : item))} /></td><td><AdminIdentityDetailsForm userId={user.id} identityLabel={user.identityLabel} realName={user.realName} onUpdated={(details) => setUsers((current) => current.map((item) => item.id === user.id ? { ...item, ...details } : item))} /></td><td>{user.platformRole === "ADMIN" ? "管理员" : "成员"}</td><td><span className={user.accountStatus === "ACTIVE" ? "badge" : "badge danger"}>{user.accountStatus === "ACTIVE" ? "正常" : "已停用"}</span></td><td><button onClick={() => userAction(user.id, user.accountStatus === "ACTIVE" ? "DISABLED" : "ACTIVE")}>{user.accountStatus === "ACTIVE" ? "停用" : "恢复"}</button></td></tr>)}</tbody></table></div></section>
     <section className="panel admin-section" id="activity"><h2>最近操作</h2><div className="audit-list">{initialEvents.map((item) => <div className="audit-row" key={item.id}><code>{item.eventType}</code><span>{item.outcome} · {item.severity}</span><time>{auditTimeFormatter.format(new Date(item.createdAt))}</time></div>)}</div></section>
   </main>;
 }

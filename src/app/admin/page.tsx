@@ -14,7 +14,7 @@ export default async function AdminPage() {
   if (actor?.platformRole !== "ADMIN" || actor.accountStatus !== "ACTIVE") redirect("/error?code=forbidden");
   const [clients, users, events] = await Promise.all([
     prisma.oauthClient.findMany({ orderBy: { createdAt: "desc" }, select: { clientId: true, name: true, disabled: true, scopes: true, redirectUris: true, webhooks: { select: { endpointUrl: true, active: true, eventTypes: true } } } }),
-    prisma.user.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true, username: true, email: true, platformRole: true, accountStatus: true } }),
+    prisma.user.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, name: true, username: true, identityLabel: true, realName: true, email: true, platformRole: true, accountStatus: true } }),
     prisma.auditEvent.findMany({ orderBy: { createdAt: "desc" }, take: 50, select: { id: true, eventType: true, outcome: true, severity: true, clientId: true, createdAt: true } }),
   ]);
   const webhookStatus = new Map<string, NonNullable<Awaited<ReturnType<typeof getClientWebhookStatus>>>>();

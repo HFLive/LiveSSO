@@ -17,7 +17,7 @@ export async function GET(request: Request, context: { params: Promise<{ userId:
     );
   }
   const { userId } = await context.params;
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, name: true, image: true, email: true, emailVerified: true, accountStatus: true, updatedAt: true } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, name: true, identityLabel: true, realName: true, image: true, email: true, emailVerified: true, accountStatus: true, updatedAt: true } });
   if (!user) {
     return NextResponse.json(
       { error: "NOT_FOUND" },
@@ -25,5 +25,5 @@ export async function GET(request: Request, context: { params: Promise<{ userId:
     );
   }
   await prisma.auditEvent.create({ data: { eventType: "directory.user.read", actorType: "CLIENT", clientId: caller.clientId, subjectUserId: user.id, outcome: "SUCCESS", expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1_000) } });
-  return NextResponse.json({ subject: user.id, preferredUsername: user.username, name: user.name, picture: user.image, email: user.email, emailVerified: user.emailVerified, status: user.accountStatus, updatedAt: user.updatedAt }, { headers: { "cache-control": "private, no-store" } });
+  return NextResponse.json({ subject: user.id, preferredUsername: user.username, name: user.name, identityLabel: user.identityLabel, realName: user.realName, picture: user.image, email: user.email, emailVerified: user.emailVerified, status: user.accountStatus, updatedAt: user.updatedAt }, { headers: { "cache-control": "private, no-store" } });
 }

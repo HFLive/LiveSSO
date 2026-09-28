@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "identityLabel" VARCHAR(40), ADD COLUMN "realName" VARCHAR(80);

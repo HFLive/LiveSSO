@@ -10,7 +10,7 @@ export default async function Home() {
   const user = session
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { name: true, username: true, email: true, image: true, platformRole: true, accountStatus: true },
+        select: { name: true, identityLabel: true, realName: true, email: true, image: true, platformRole: true, accountStatus: true },
       })
     : null;
   const signedIn = user?.accountStatus === "ACTIVE";
@@ -38,7 +38,7 @@ export default async function Home() {
                 <span className="signed-in-avatar" aria-hidden="true">
                   {user.image ? <Image src={user.image} alt="" width={48} height={48} unoptimized /> : user.name.slice(0, 1).toUpperCase()}
                 </span>
-                <div><span className="portal-overline">当前账号</span><strong>{user.name}</strong><small>@{user.username ?? "未设置用户名"} · {user.email}</small></div>
+                <div><span className="portal-overline">当前账号</span><strong>{user.name}{user.identityLabel || user.realName ? <span className="portal-identity-meta">（{[user.identityLabel, user.realName].filter(Boolean).join(" ")}）</span> : null}</strong><small>{user.email}</small></div>
               </div>
               <Link className="primary-button button-link" href="/profile">管理个人资料 <span aria-hidden="true">↗</span></Link>
               {user.platformRole === "ADMIN" ? <Link className="portal-text-link" href="/admin">进入管理后台 <span aria-hidden="true">→</span></Link> : null}

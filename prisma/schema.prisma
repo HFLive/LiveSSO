@@ -88,6 +88,8 @@ model User {
   updatedAt           DateTime            @updatedAt
   username            String?
   displayUsername     String?
+  identityLabel       String?             @db.VarChar(40)
+  realName            String?             @db.VarChar(80)
   platformRole        PlatformRole        @default(USER)
   accountStatus       AccountStatus       @default(ACTIVE)
   sessions            Session[]
