@@ -10,6 +10,8 @@ const OUTPUT_SIZE = 512;
 type ProfileDetails = {
   name: string;
   username: string | null;
+  identityLabel: string | null;
+  realName: string | null;
   email: string;
   emailVerified: boolean;
   platformRole: "USER" | "ADMIN";
@@ -159,7 +161,7 @@ export function ProfileAvatarForm({
       <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
       <div className="profile-hero-copy">
         <p className="eyebrow">个人资料</p>
-        <h1 className="profile-title">{name}</h1>
+        <h1 className="profile-title">{name}{profile.identityLabel || profile.realName ? <small className="profile-identity-meta">（{[profile.identityLabel, profile.realName].filter(Boolean).join(" ")}）</small> : null}</h1>
         <p className="profile-handle">@{profile.username ?? "未设置用户名"}</p>
         <p className="auth-copy">管理你的显示名、邮箱和头像。</p>
       </div>
@@ -196,7 +198,8 @@ export function ProfileAvatarForm({
             {nameError ? <small className="profile-field-error" role="alert">{nameError}</small> : null}
             {nameMessage ? <small className="profile-field-success" role="status">{nameMessage}</small> : null}
           </dd></div>
-          <div><dt>用户名</dt><dd>{profile.username ?? "未设置"}</dd></div>
+          <div><dt>用户 ID</dt><dd>@{profile.username ?? "未设置"}</dd></div>
+          <div><dt>身份资料</dt><dd>{[profile.identityLabel, profile.realName].filter(Boolean).join(" · ") || "管理员尚未设置"}</dd></div>
           <div><dt>邮箱</dt><dd>{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></dd></div>
           <div><dt>账号类型</dt><dd>{profile.platformRole === "ADMIN" ? "管理员" : "成员"}</dd></div>
           <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>

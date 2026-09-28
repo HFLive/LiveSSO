@@ -20,9 +20,11 @@
 | Scope | API | 返回内容 |
 | --- | --- | --- |
 | `directory:user:status` | `GET /api/directory/users/{sub}/status` | `subject`、全局账号状态、更新时间 |
-| `directory:user:read` | `GET /api/directory/users/{sub}` | 用户名、显示名、头像、邮箱验证和全局状态 |
+| `directory:user:read` | `GET /api/directory/users/{sub}` | 用户名、显示名、可选的管理员身份标签 `identityLabel` 与真名 `realName`、头像、邮箱验证和全局状态 |
 
 接口拒绝 authorization-code 用户 token，即使对应 client 同时拥有 Directory scope；调用必须来自 `client_credentials`。opaque token 通过数据库摘要、到期、client 状态和 scope 联合校验，JWT 路径验证 EdDSA 签名、issuer、audience、期限、client 与 scope。成功、认证失败和未找到响应均显式使用 `private, no-store`。
+
+管理员可对单一成员使用 `PATCH /api/admin/users/{userId}` 提交 `{ "identityLabel": "教师", "realName": "张老师" }`；两字段必须同时出现，可分别传 `null` 清空。长度上限分别为 40、80 字符，拒绝控制字符与混合操作。写入、审计和 `user.profile.changed` outbox 位于同一事务；事件只携带 subject，不直接携带真名，接入方通过 Directory 重新读取。
 
 ## 可靠事件
 

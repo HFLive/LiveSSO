@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { updateUsername, usernameSchema, UsernameUpdateError } from "@/lib/security/username-service";
+import { IdentityDetailsError, updateIdentityDetails } from "@/lib/security/identity-details-service";
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/security/admin";
 import { setUserAccountStatus } from "@/lib/security/client-service";
@@ -9,6 +10,7 @@ import { setUserAccountStatus } from "@/lib/security/client-service";
 const inputSchema = z.union([
   z.object({ accountStatus: z.enum(["ACTIVE", "DISABLED"]) }).strict(),
   z.object({ username: usernameSchema }).strict(),
+  z.object({ identityLabel: z.string().trim().max(40).nullable(), realName: z.string().trim().max(80).nullable() }).strict(),
 ]);
 export async function PATCH(request: Request, context: { params: Promise<{ userId: string }> }) {
   const authorization = await requirePlatformAdmin();
@@ -29,6 +31,19 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
       if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
         return NextResponse.json({ error: error.code === "P2002" ? "USERNAME_TAKEN" : "RETRY_UPDATE" }, { status: 409 });
       }
+      return NextResponse.json({ error: "USER_UPDATE_FAILED" }, { status: 500 });
+    }
+  }
+  if ("identityLabel" in parsed.data) {
+    if ([parsed.data.identityLabel, parsed.data.realName].some((value) => value && /[\u0000-\u001f\u007f]/.test(value))) return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
+    const clean = (value: string | null) => value ? value.trim().replace(/\s+/g, " ") || null : null;
+    const identityLabel = clean(parsed.data.identityLabel);
+    const realName = clean(parsed.data.realName);
+    try {
+      return NextResponse.json(await updateIdentityDetails(prisma, { actorUserId: authorization.actor.id, userId, identityLabel, realName }));
+    } catch (error) {
+      if (error instanceof IdentityDetailsError) return NextResponse.json({ error: error.code }, { status: error.code === "FORBIDDEN" ? 403 : 404 });
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return NextResponse.json({ error: "RETRY_UPDATE" }, { status: 409 });
       return NextResponse.json({ error: "USER_UPDATE_FAILED" }, { status: 500 });
     }
   }

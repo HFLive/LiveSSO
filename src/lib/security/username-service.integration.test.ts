@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { updateUsername } from "./username-service";
+import { updateIdentityDetails } from "./identity-details-service";
 
 const suite = process.env.RUN_USERNAME_TESTS === "true" ? describe : describe.skip;
 suite("admin username changes with PostgreSQL", () => {
@@ -54,6 +55,17 @@ suite("admin username changes with PostgreSQL", () => {
     expect(event.payload).toMatchObject({ subject: userId, preferred_username: newName });
     expect(await change(newName)).toMatchObject({ changed: false });
     expect(await db.auditEvent.count({ where: { eventType: "user.username.changed", subjectUserId: userId } })).toBe(1);
+  });
+  it("stores administrator identity details and publishes a profile refresh", async () => {
+    await expect(updateIdentityDetails(db, { actorUserId: otherId, userId, identityLabel: "教师", realName: "张老师" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const before = await db.outboxEvent.count({ where: { aggregateId: userId, eventType: "user.profile.changed" } });
+    expect(await updateIdentityDetails(db, { actorUserId: adminId, userId, identityLabel: "教师", realName: "张老师" })).toMatchObject({ changed: true });
+    expect(await db.user.findUniqueOrThrow({ where: { id: userId } })).toMatchObject({ identityLabel: "教师", realName: "张老师" });
+    expect(await db.outboxEvent.count({ where: { aggregateId: userId, eventType: "user.profile.changed" } })).toBe(before + 1);
+    expect(await db.auditEvent.count({ where: { eventType: "user.identity-details.changed", actorUserId: adminId, subjectUserId: userId } })).toBe(1);
+    expect(await updateIdentityDetails(db, { actorUserId: adminId, userId, identityLabel: "教师", realName: "张老师" })).toMatchObject({ changed: false });
+    await updateIdentityDetails(db, { actorUserId: adminId, userId, identityLabel: null, realName: null });
+    expect(await db.user.findUniqueOrThrow({ where: { id: userId } })).toMatchObject({ identityLabel: null, realName: null });
   });
   it("accepts the new login and email, rejects the old login", async () => {
     for (const [identifier, status] of [[oldName, 401], [newName.toUpperCase(), 200], [`${suffix}@example.invalid`, 200]] as const) {

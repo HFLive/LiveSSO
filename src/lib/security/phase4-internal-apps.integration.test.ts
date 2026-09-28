@@ -94,6 +94,20 @@ suite("Phase 4 internal applications", () => {
     expect(await directory.json()).toMatchObject({ subject: userId, status: "ACTIVE" });
   });
 
+  it("returns administrator identity details only to a Directory profile reader", async () => {
+    const client = await createApprovedClient(database, { actorUserId: adminId, name: "Identity profile reader", redirectUris: [], scopes: ["directory:user:read"] });
+    createdClientIds.push(client.clientId);
+    await database.user.update({ where: { id: userId }, data: { identityLabel: "教师", realName: "张老师" } });
+    const response = await token(client.clientId, client.clientSecret, "directory:user:read");
+    expect(response.status).toBe(200);
+    const body = await response.json() as { access_token: string };
+    const { GET } = await import("../../app/api/directory/users/[userId]/route");
+    const directory = await GET(new Request(`http://localhost:3000/api/directory/users/${userId}`, { headers: { authorization: `Bearer ${body.access_token}` } }), { params: Promise.resolve({ userId }) });
+    expect(directory.status).toBe(200);
+    expect(await directory.json()).toMatchObject({ subject: userId, identityLabel: "教师", realName: "张老师" });
+    await database.user.update({ where: { id: userId }, data: { identityLabel: null, realName: null } });
+  });
+
   it("creates one signed outbox delivery and completes it exactly once", async () => {
     const client = await createApprovedClient(database, { actorUserId: adminId, name: "Event receiver", redirectUris: [], scopes: ["directory:user:status"], webhookUrl: "https://events.example/hflive" });
     createdClientIds.push(client.clientId);
