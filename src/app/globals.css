@@ -445,7 +445,7 @@ h1 {
 }
 
 .profile-shell { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 88px; }
-.profile-identity-meta { margin-left: .45em; color: var(--muted); font-size: .44em; font-weight: 500; overflow-wrap: anywhere; vertical-align: baseline; }
+.profile-identity-meta { min-width: 0; color: var(--muted); font-size: .44em; font-weight: 500; letter-spacing: normal; line-height: 1.3; overflow-wrap: anywhere; }
 .profile-page { display: grid; gap: 20px; }
 .profile-page-header { display: flex; align-items: center; justify-content: space-between; min-height: 52px; margin-bottom: 6px; }
 .profile-return-link { display: grid; gap: 2px; min-width: 150px; text-align: right; }
@@ -453,7 +453,8 @@ h1 {
 .profile-return-link strong { color: var(--text); font-size: 14px; font-weight: 600; }
 .profile-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 28px; align-items: center; padding: 32px; }
 .profile-hero .eyebrow { margin-bottom: 10px; }
-.profile-title { font-size: clamp(34px, 6vw, 54px); }
+.profile-title { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .35em; row-gap: .08em; font-size: clamp(34px, 6vw, 54px); line-height: 1.1; }
+.profile-title-name { min-width: 0; overflow-wrap: anywhere; }
 .avatar-frame { display: grid; width: 160px; height: 160px; overflow: hidden; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--accent); background: rgba(157,245,173,.08); font-size: 40px; }
 .avatar-frame img { width: 100%; height: 100%; object-fit: cover; }
 .profile-hero-copy .auth-copy { margin: 14px 0 0; }

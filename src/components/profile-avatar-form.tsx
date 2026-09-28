@@ -161,7 +161,7 @@ export function ProfileAvatarForm({
       <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
       <div className="profile-hero-copy">
         <p className="eyebrow">个人资料</p>
-        <h1 className="profile-title">{name}{profile.identityLabel || profile.realName ? <small className="profile-identity-meta">（{[profile.identityLabel, profile.realName].filter(Boolean).join(" ")}）</small> : null}</h1>
+        <h1 className="profile-title"><span className="profile-title-name">{name}</span>{profile.identityLabel || profile.realName ? <small className="profile-identity-meta">({[profile.identityLabel, profile.realName].filter(Boolean).join(" ")})</small> : null}</h1>
         <p className="profile-handle">@{profile.username ?? "未设置用户名"}</p>
         <p className="auth-copy">管理你的显示名、邮箱和头像。</p>
       </div>
