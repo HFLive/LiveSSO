@@ -1,21 +1,52 @@
 import { randomUUID } from "node:crypto";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { z } from "zod";
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { markOutboxPending } from "./outbox-pending";
 
 export const usernameSchema = z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/);
 export class UsernameUpdateError extends Error {
-  constructor(public code: "INVALID_USERNAME" | "USERNAME_TAKEN" | "USER_NOT_FOUND" | "FORBIDDEN") { super(code); }
+  constructor(public code: "INVALID_USERNAME" | "USERNAME_TAKEN" | "USER_NOT_FOUND" | "FORBIDDEN" | "INVALID_PASSWORD") { super(code); }
 }
 
 export async function updateUsername(database: PrismaClient, input: { actorUserId: string; userId: string; username: string }) {
+  return changeUsername(database, { ...input, mode: "admin" });
+}
+
+export async function updateOwnUsername(database: PrismaClient, input: { userId: string; username: string; password: string }) {
+  return changeUsername(database, { ...input, actorUserId: input.userId, mode: "self" });
+}
+
+export async function consumeOwnUsernameAttempt(database: PrismaClient, userId: string) {
+  const now = BigInt(Date.now());
+  const windowStart = now - 10n * 60n * 1000n;
+  const key = `profile-username:${userId}`;
+  const [attempt] = await database.$queryRaw<Array<{ count: number }>>(Prisma.sql`
+    INSERT INTO "rateLimit" ("id", "key", "count", "lastRequest")
+    VALUES (gen_random_uuid(), ${key}, 1, ${now})
+    ON CONFLICT ("key") DO UPDATE SET
+      "count" = CASE WHEN "rateLimit"."lastRequest" < ${windowStart} THEN 1 ELSE "rateLimit"."count" + 1 END,
+      "lastRequest" = ${now}
+    RETURNING "count"
+  `);
+  return (attempt?.count ?? 6) <= 5;
+}
+
+async function changeUsername(database: PrismaClient, input: { actorUserId: string; userId: string; username: string; mode: "admin" | "self"; password?: string }) {
   const parsed = usernameSchema.safeParse(input.username);
   if (!parsed.success) throw new UsernameUpdateError("INVALID_USERNAME");
   const username = parsed.data.toLowerCase();
   const now = new Date();
   const result = await database.$transaction(async (tx) => {
     const actor = await tx.user.findUnique({ where: { id: input.actorUserId } });
-    if (actor?.platformRole !== "ADMIN" || actor.accountStatus !== "ACTIVE") throw new UsernameUpdateError("FORBIDDEN");
+    if (!actor || actor.accountStatus !== "ACTIVE" || (input.mode === "admin" && actor.platformRole !== "ADMIN")) throw new UsernameUpdateError("FORBIDDEN");
+    if (input.mode === "self") {
+      const account = await tx.account.findFirst({ where: { userId: input.userId, providerId: "credential" }, select: { password: true } });
+      const valid = account?.password
+        ? await verifyPassword({ hash: account.password, password: input.password ?? "" })
+        : (await hashPassword(input.password ?? ""), false);
+      if (!valid) throw new UsernameUpdateError("INVALID_PASSWORD");
+    }
     const current = await tx.user.findUnique({ where: { id: input.userId } });
     if (!current) throw new UsernameUpdateError("USER_NOT_FOUND");
     if (current.username === username) return { username, changed: false, deliveryCount: 0 };

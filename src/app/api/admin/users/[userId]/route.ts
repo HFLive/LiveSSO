@@ -25,7 +25,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
       return NextResponse.json(await updateUsername(prisma, { actorUserId: authorization.actor.id, userId, username: parsed.data.username }));
     } catch (error) {
       if (error instanceof UsernameUpdateError) {
-        const status = { INVALID_USERNAME: 400, USERNAME_TAKEN: 409, USER_NOT_FOUND: 404, FORBIDDEN: 403 }[error.code];
+        const status = { INVALID_USERNAME: 400, USERNAME_TAKEN: 409, USER_NOT_FOUND: 404, FORBIDDEN: 403, INVALID_PASSWORD: 401 }[error.code];
         return NextResponse.json({ error: error.code }, { status });
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
