@@ -1,10 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { updateUsername } from "./username-service";
+import { consumeOwnUsernameAttempt, updateOwnUsername, updateUsername } from "./username-service";
 import { updateIdentityDetails } from "./identity-details-service";
 
 const suite = process.env.RUN_USERNAME_TESTS === "true" ? describe : describe.skip;
-suite("admin username changes with PostgreSQL", () => {
+suite("username changes with PostgreSQL", () => {
   let db: (typeof import("../prisma"))["prisma"];
   let auth: (typeof import("../auth"))["auth"];
   let adminId: string, userId: string, otherId: string, clientId: string;
@@ -26,6 +26,7 @@ suite("admin username changes with PostgreSQL", () => {
   afterAll(async () => {
     if (!db) return;
     await db.outboxEvent.deleteMany({ where: { aggregateId: { in: [userId, otherId] } } });
+    await db.rateLimit.deleteMany({ where: { key: `profile-username:${userId}` } });
     await db.invitation.deleteMany({ where: { normalizedEmail: `reserved-${suffix}@example.invalid` } });
     if (clientId) await db.oauthClient.delete({ where: { clientId } });
     await db.user.deleteMany({ where: { id: { in: [adminId, userId, otherId] } } });
@@ -73,10 +74,31 @@ suite("admin username changes with PostgreSQL", () => {
       expect(response.status).toBe(status);
     }
   });
+  it("lets the owner change their username with the current password without changing their identity", async () => {
+    const ownName = `self_${suffix}`;
+    await expect(updateOwnUsername(db, { userId, username: ownName, password: "incorrect" })).rejects.toMatchObject({ code: "INVALID_PASSWORD" });
+    await expect(updateOwnUsername(db, { userId, username: taken, password })).rejects.toMatchObject({ code: "USERNAME_TAKEN" });
+    const before = await db.user.findUniqueOrThrow({ where: { id: userId } });
+    expect(await updateOwnUsername(db, { userId, username: ownName.toUpperCase(), password })).toMatchObject({ id: userId, username: ownName, changed: true });
+    const after = await db.user.findUniqueOrThrow({ where: { id: userId } });
+    expect(after).toMatchObject({ id: before.id, email: before.email, platformRole: before.platformRole, username: ownName, displayUsername: ownName.toUpperCase() });
+    expect(await db.auditEvent.count({ where: { eventType: "user.username.changed", actorUserId: userId, subjectUserId: userId } })).toBe(1);
+    expect(await db.outboxEvent.count({ where: { aggregateId: userId, eventType: "user.profile.changed" } })).toBeGreaterThan(1);
+    for (const [identifier, status] of [[newName, 401], [ownName.toUpperCase(), 200]] as const) {
+      const response = await auth.handler(new Request("http://localhost:3000/api/auth/hflive/sign-in", { method: "POST", headers: { "content-type": "application/json", origin: "http://localhost:3000" }, body: JSON.stringify({ identifier, password }) }));
+      expect(response.status).toBe(status);
+    }
+  });
   it("allows only one concurrent claim of a username", async () => {
     const shared = `shared_${suffix}`;
     const results = await Promise.allSettled([change(shared), change(shared, adminId, otherId)]);
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(await db.user.count({ where: { username: shared } })).toBe(1);
+  });
+  it("limits repeated self-service password attempts in PostgreSQL", async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect(await consumeOwnUsernameAttempt(db, userId)).toBe(true);
+    }
+    expect(await consumeOwnUsernameAttempt(db, userId)).toBe(false);
   });
 });

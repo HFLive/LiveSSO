@@ -4,6 +4,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import NextImage from "next/image";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
+import { ProfileUsernameForm } from "@/components/profile-username-form";
+import { ProfileEmailForm } from "@/components/profile-email-form";
+import { ProfileEditDialog } from "@/components/profile-edit-dialog";
 
 const OUTPUT_SIZE = 512;
 
@@ -24,28 +27,35 @@ export function ProfileAvatarForm({
   storageEnabled,
   returnTo,
   returnAppName,
+  mailEnabled,
+  pendingEmail,
 }: {
   profile: ProfileDetails;
   initialPicture: string | null;
   storageEnabled: boolean;
   returnTo?: string;
   returnAppName?: string;
+  mailEnabled: boolean;
+  pendingEmail: { newEmail: string; expiresAt: string } | null;
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [picture, setPicture] = useState(initialPicture);
   const [name, setName] = useState(profile.name);
+  const [username, setUsername] = useState(profile.username);
   const [nameDraft, setNameDraft] = useState(profile.name);
+  const [nameOpen, setNameOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [notice, setNotice] = useState<string>();
   const [namePending, setNamePending] = useState(false);
-  const [nameMessage, setNameMessage] = useState<string>();
   const [nameError, setNameError] = useState<string>();
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
 
   function draw() {
@@ -68,10 +78,23 @@ export function ProfileAvatarForm({
 
   useEffect(draw, [zoom, offsetX, offsetY, ready]);
   useEffect(() => () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(undefined), 6000);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+
+  function closeAvatar() {
+    setAvatarOpen(false);
+    setReady(false);
+    setError(undefined);
+    imageRef.current = null;
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    objectUrlRef.current = null;
+  }
 
   function selectFile(file?: File) {
     setError(undefined);
-    setMessage(undefined);
     if (!file) return;
     if (file.size > 8 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setError("请选择小于 8 MiB 的 JPEG、PNG 或 WebP 图片。");
@@ -82,13 +105,16 @@ export function ProfileAvatarForm({
     objectUrlRef.current = url;
     const image = new window.Image();
     image.onload = () => {
+      if (objectUrlRef.current !== url) return;
       imageRef.current = image;
       setZoom(1);
       setOffsetX(0);
       setOffsetY(0);
       setReady(true);
     };
-    image.onerror = () => setError("无法读取这张图片。");
+    image.onerror = () => {
+      if (objectUrlRef.current === url) setError("无法读取这张图片。");
+    };
     image.src = url;
   }
 
@@ -97,7 +123,6 @@ export function ProfileAvatarForm({
     if (!canvas || !ready) return;
     setPending(true);
     setError(undefined);
-    setMessage(undefined);
     try {
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("encode")), "image/webp", 0.9));
       const body = new FormData();
@@ -106,11 +131,12 @@ export function ProfileAvatarForm({
       const result = await response.json() as { picture?: string; error?: string };
       if (!response.ok || !result.picture) throw new Error(result.error || "头像保存失败。");
       setPicture(result.picture);
+      closeAvatar();
       if (returnTo) {
         window.location.assign(returnTo);
         return;
       }
-      setMessage("头像已更新。已连接的应用将使用新头像。");
+      setNotice("头像已更新。已连接的应用将使用新头像。");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "头像保存失败。");
     } finally {
@@ -121,7 +147,6 @@ export function ProfileAvatarForm({
   async function submitName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNamePending(true);
-    setNameMessage(undefined);
     setNameError(undefined);
     try {
       const response = await fetch("/api/profile", {
@@ -135,7 +160,8 @@ export function ProfileAvatarForm({
       }
       setName(result.name);
       setNameDraft(result.name);
-      setNameMessage("显示名已更新。已连接的应用将自动同步。");
+      setNameOpen(false);
+      setNotice("显示名已更新。已连接的应用将自动同步。");
     } catch (cause) {
       setNameError(cause instanceof Error ? cause.message : "显示名保存失败，请稍后重试。");
     } finally {
@@ -158,72 +184,68 @@ export function ProfileAvatarForm({
     </header>
 
     <div className="panel profile-hero">
-      <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
+      <div className="profile-avatar-action">
+        <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
+        {storageEnabled ? <button className="profile-inline-action" type="button" onClick={() => { setError(undefined); setAvatarOpen(true); }}>更改头像</button> : null}
+      </div>
       <div className="profile-hero-copy">
         <p className="eyebrow">个人资料</p>
-        <h1 className="profile-title"><span className="profile-title-name">{name}</span>{profile.identityLabel || profile.realName ? <small className="profile-identity-meta">({[profile.identityLabel, profile.realName].filter(Boolean).join(" ")})</small> : null}</h1>
-        <p className="profile-handle">@{profile.username ?? "未设置用户名"}</p>
-        <p className="auth-copy">管理你的显示名、邮箱和头像。</p>
+        <h1 className="profile-title"><span className="profile-title-name">{name}</span>{profile.platformRole === "ADMIN" && (profile.identityLabel || profile.realName) ? <small className="profile-identity-meta">({[profile.identityLabel, profile.realName].filter(Boolean).join(" ")})</small> : null}</h1>
+        <p className="profile-handle">@{username ?? "未设置用户名"}</p>
       </div>
-      <span className="account-status">账号正常</span>
     </div>
 
     <div className="profile-grid">
-      <div className="panel profile-details">
+      <div className="panel profile-details" id="basic">
         <div className="section-heading">
           <div><p className="eyebrow">基本资料</p><h2>账号信息</h2></div>
         </div>
         <dl className="profile-data-list">
-          <div className="profile-name-row"><dt>显示名</dt><dd>
-            <form className="profile-name-form" onSubmit={submitName}>
-              <input
-                aria-label="显示名"
-                maxLength={80}
-                onChange={(event) => {
-                  setNameDraft(event.target.value);
-                  setNameMessage(undefined);
-                  setNameError(undefined);
-                }}
-                required
-                value={nameDraft}
-              />
-              <button
-                className="secondary-button"
-                disabled={namePending || nameDraft.trim() === name}
-                type="submit"
-              >
-                {namePending ? "保存中…" : "保存"}
-              </button>
-            </form>
-            {nameError ? <small className="profile-field-error" role="alert">{nameError}</small> : null}
-            {nameMessage ? <small className="profile-field-success" role="status">{nameMessage}</small> : null}
+          <div className="profile-name-row"><dt>显示名</dt><dd><span>{name}</span><button className="profile-inline-action" type="button" onClick={() => { setNameDraft(name); setNameError(undefined); setNameOpen(true); }}>更改</button></dd></div>
+          <div><dt>登录用户名</dt><dd><span>@{username ?? "未设置"}</span><ProfileUsernameForm username={username} onUpdated={setUsername} onNotice={setNotice} /></dd></div>
+          {profile.platformRole === "ADMIN" ? <div><dt>身份资料</dt><dd>{[profile.identityLabel, profile.realName].filter(Boolean).join(" · ") || "管理员尚未设置"}</dd></div> : null}
+          <div><dt>邮箱</dt><dd>
+            <span className="profile-email-value">{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></span>
+            <ProfileEmailForm mailEnabled={mailEnabled} initialPending={pendingEmail} currentEmail={profile.email} onNotice={setNotice} />
           </dd></div>
-          <div><dt>用户 ID</dt><dd>@{profile.username ?? "未设置"}</dd></div>
-          <div><dt>身份资料</dt><dd>{[profile.identityLabel, profile.realName].filter(Boolean).join(" · ") || "管理员尚未设置"}</dd></div>
-          <div><dt>邮箱</dt><dd>{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></dd></div>
-          <div><dt>账号类型</dt><dd>{profile.platformRole === "ADMIN" ? "管理员" : "成员"}</dd></div>
+          {profile.platformRole === "ADMIN" ? <div><dt>账号类型</dt><dd>管理员</dd></div> : null}
           <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
         </dl>
-        <p className="fine-print">需要修改用户名？请联系管理员。</p>
       </div>
 
-      <div className="panel crop-panel">
-        <div className="section-heading">
-          <div><p className="eyebrow">头像</p><h2>更换头像</h2></div>
-        </div>
-      {!storageEnabled ? <p className="form-error" role="alert">当前自部署实例未启用对象存储，头像功能不可用。</p> : <>
-        <label className="file-picker">选择图片<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => selectFile(event.target.files?.[0])} /></label>
-        <canvas ref={canvasRef} width={OUTPUT_SIZE} height={OUTPUT_SIZE} className={`crop-canvas${ready ? " ready" : ""}`} aria-label="头像裁切预览" />
-        {ready ? <div className="crop-controls">
-          <label>缩放 <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
-          <label>水平位置 <input type="range" min="-100" max="100" value={offsetX} onChange={(event) => setOffsetX(Number(event.target.value))} /></label>
-          <label>垂直位置 <input type="range" min="-100" max="100" value={offsetY} onChange={(event) => setOffsetY(Number(event.target.value))} /></label>
-          <button className="primary-button" type="button" disabled={pending} onClick={submit}>{pending ? "保存中…" : "保存头像"}</button>
-        </div> : <p className="fine-print">支持 JPEG、PNG、WebP，图片不超过 8 MiB。保存后会自动处理成适合各应用使用的尺寸。</p>}
-      </>}
-      {error ? <p className="form-error" role="alert">{error}</p> : null}
-      {message ? <p className="form-success" role="status">{message}</p> : null}
-      </div>
     </div>
+    <ProfileEditDialog open={nameOpen} title="更改显示名" description={`当前显示名：${name}`} busy={namePending} onClose={() => setNameOpen(false)}>
+      <form className="profile-dialog-form" onSubmit={submitName}>
+        <label htmlFor="profile-new-name">显示名</label>
+        <input id="profile-new-name" data-profile-dialog-focus maxLength={80} required value={nameDraft} disabled={namePending} onChange={(event) => { setNameDraft(event.target.value); setNameError(undefined); }} />
+        {nameError ? <p className="form-error" role="alert">{nameError}</p> : null}
+        <div className="profile-dialog-actions">
+          <button className="secondary-button" type="button" disabled={namePending} onClick={() => setNameOpen(false)}>取消</button>
+          <button className="primary-button" type="submit" disabled={namePending || nameDraft.trim() === name}>{namePending ? "保存中…" : "保存显示名"}</button>
+        </div>
+      </form>
+    </ProfileEditDialog>
+    {storageEnabled ? <ProfileEditDialog open={avatarOpen} title="更改头像" busy={pending} onClose={closeAvatar}>
+      <div className="profile-avatar-dialog-body">
+        {!ready ? <div className="profile-avatar-pick">
+          <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
+          <p className="fine-print">选择 JPEG、PNG 或 WebP 图片，最大 8 MiB。</p>
+        </div> : <>
+          <canvas ref={canvasRef} width={OUTPUT_SIZE} height={OUTPUT_SIZE} className="crop-canvas ready" aria-label="头像裁切预览" />
+          <div className="crop-controls">
+            <label>缩放 <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
+            <label>水平位置 <input type="range" min="-100" max="100" value={offsetX} onChange={(event) => setOffsetX(Number(event.target.value))} /></label>
+            <label>垂直位置 <input type="range" min="-100" max="100" value={offsetY} onChange={(event) => setOffsetY(Number(event.target.value))} /></label>
+          </div>
+        </>}
+        <input ref={fileInputRef} className="profile-avatar-file-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="选择新头像" onChange={(event) => { selectFile(event.target.files?.[0]); event.target.value = ""; }} />
+        {error ? <p className="form-error" role="alert">{error}</p> : null}
+        <div className="profile-dialog-actions">
+          <button className="secondary-button" type="button" disabled={pending} onClick={() => fileInputRef.current?.click()}>{ready ? "重新选择" : "选择图片"}</button>
+          {ready ? <button className="primary-button" type="button" disabled={pending} onClick={submit}>{pending ? "保存中…" : "保存头像"}</button> : null}
+        </div>
+      </div>
+    </ProfileEditDialog> : null}
+    {notice ? <div className="profile-toast" role="status"><span>{notice}</span><button type="button" aria-label="关闭提示" onClick={() => setNotice(undefined)}>×</button></div> : null}
   </section>;
 }

@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ProfileAvatarForm } from "@/components/profile-avatar-form";
-import { ProfileEmailForm } from "@/components/profile-email-form";
 import { getPendingEmailChange } from "@/lib/security/email-change-service";
 import { auth } from "@/lib/auth";
 import { getServerEnv } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { resolveProfileReturnTarget } from "@/lib/security/profile-return";
+import "./profile.css";
 
 export const metadata: Metadata = { title: "管理资料" };
 
@@ -52,8 +52,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         storageEnabled={getServerEnv().OBJECT_STORAGE_ENABLED}
         returnTo={returnTo}
         returnAppName={returnTarget?.appName}
+        mailEnabled={getServerEnv().MAIL_ENABLED}
+        pendingEmail={pendingEmail ? { newEmail: pendingEmail.newEmail, expiresAt: pendingEmail.expiresAt.toISOString() } : null}
       />
-      <ProfileEmailForm mailEnabled={getServerEnv().MAIL_ENABLED} initialPending={pendingEmail ? { newEmail: pendingEmail.newEmail, expiresAt: pendingEmail.expiresAt.toISOString() } : null} />
     </main>
   );
 }
