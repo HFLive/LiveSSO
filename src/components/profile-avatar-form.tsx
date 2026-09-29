@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import { ProfileUsernameForm } from "@/components/profile-username-form";
 import { ProfileEmailForm } from "@/components/profile-email-form";
+import { ProfilePasswordForm } from "@/components/profile-password-form";
 import { ProfileEditDialog } from "@/components/profile-edit-dialog";
 
 const OUTPUT_SIZE = 512;
@@ -29,6 +30,7 @@ export function ProfileAvatarForm({
   returnAppName,
   mailEnabled,
   pendingEmail,
+  initialPasswordOpen,
 }: {
   profile: ProfileDetails;
   initialPicture: string | null;
@@ -37,6 +39,7 @@ export function ProfileAvatarForm({
   returnAppName?: string;
   mailEnabled: boolean;
   pendingEmail: { newEmail: string; expiresAt: string } | null;
+  initialPasswordOpen: boolean;
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -208,6 +211,7 @@ export function ProfileAvatarForm({
             <span className="profile-email-value">{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></span>
             <ProfileEmailForm mailEnabled={mailEnabled} initialPending={pendingEmail} currentEmail={profile.email} onNotice={setNotice} />
           </dd></div>
+          <div id="password"><dt>密码</dt><dd><span>使用密码登录</span><ProfilePasswordForm initialOpen={initialPasswordOpen} onNotice={setNotice} /></dd></div>
           {profile.platformRole === "ADMIN" ? <div><dt>账号类型</dt><dd>管理员</dd></div> : null}
           <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
         </dl>
