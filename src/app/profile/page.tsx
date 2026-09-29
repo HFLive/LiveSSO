@@ -11,12 +11,15 @@ import "./profile.css";
 
 export const metadata: Metadata = { title: "管理资料" };
 
-export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
-  const { returnTo: requestedReturnTo } = await searchParams;
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ returnTo?: string; action?: string }> }) {
+  const { returnTo: requestedReturnTo, action } = await searchParams;
   const returnTarget = await resolveProfileReturnTarget(prisma, requestedReturnTo);
   const returnTo = returnTarget?.url;
   const session = await auth.api.getSession({ headers: await headers() });
-  const profilePath = returnTo ? `/profile?returnTo=${encodeURIComponent(returnTo)}` : "/profile";
+  const profileQuery = new URLSearchParams();
+  if (returnTo) profileQuery.set("returnTo", returnTo);
+  if (action === "password") profileQuery.set("action", "password");
+  const profilePath = profileQuery.size ? `/profile?${profileQuery}` : "/profile";
   if (!session) redirect(`/sign-in?callbackURL=${encodeURIComponent(profilePath)}`);
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -54,6 +57,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         returnAppName={returnTarget?.appName}
         mailEnabled={getServerEnv().MAIL_ENABLED}
         pendingEmail={pendingEmail ? { newEmail: pendingEmail.newEmail, expiresAt: pendingEmail.expiresAt.toISOString() } : null}
+        initialPasswordOpen={action === "password"}
       />
     </main>
   );

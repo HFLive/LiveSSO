@@ -44,6 +44,8 @@ OIDC authorize 请求，不再次显示用户名和密码表单；外部 `callba
 
 找回密码复用 Better Auth 单次 reset token，始终返回相同的提交结果。token 有效期 1 小时，重置后撤销全部现有会话并尝试发送安全提醒。邀请创建、风险 OTP、账号创建和密码重置均发送相应事务邮件或安全提醒。
 
+已登录用户在 `/profile` 的“密码”行可输入当前密码和新密码进行修改，使用 Better Auth `/change-password`，并撤销其他 HFLive Auth 会话。来自 LiveBoard 的资料页链接带 `action=password`，登录后仍保留该参数并打开改密弹窗。新密码长度为 12–128 个字符；忘记当前密码时继续使用邮件找回流程。
+
 官方生产必须启用邮件。自部署可显式设置 `MAIL_ENABLED=false`：邀请和找回密码不可用；风险规则仍会记录，但密码正确时以 `mailDegraded=true` 审计后登录，不会伪装成已经发送 OTP。该模式只用于明确接受能力降级的自部署环境。
 
 Vercel Production 使用 `pnpm vercel:build`，在 Next.js 构建前执行 `prisma migrate deploy`；Preview 不连接正式 direct URL 执行迁移。数据库迁移失败必须阻断正式部署，避免应用代码与数据库 schema 不一致。
