@@ -5,7 +5,7 @@
 }
 
 .profile-shell .profile-page { gap: 0; }
-.profile-shell .profile-page-header { margin: 0 0 25px; }
+.profile-shell .profile-page-header { margin: 0 0 25px; gap: 16px; flex-wrap: wrap; }
 
 .profile-shell .panel {
   overflow: visible;
