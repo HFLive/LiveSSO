@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { PageBackLink } from "@/components/page-back-link";
 import { AdminUsernameForm } from "./admin-username-form";
 import { AdminIdentityDetailsForm } from "./admin-identity-details-form";
 import { useState, type FormEvent } from "react";
@@ -87,7 +87,7 @@ export function AdminConsole({ initialClients, initialUsers, initialEvents, init
     setCredential(body);
   }
   return <main className="admin-shell">
-    <header className="admin-header"><div><p className="eyebrow">管理后台</p><h1 className="admin-title">组织管理</h1><p className="admin-copy">管理成员、应用和最近操作。</p></div><nav className="admin-header-actions" aria-label="快捷入口"><Link href="/">账号中心</Link><a href="/admin/invitations" className="secondary-link">邀请成员 <span aria-hidden="true">↗</span></a></nav></header>
+    <header className="admin-header"><div><p className="eyebrow">管理后台</p><div className="page-heading"><PageBackLink href="/" label="返回账号中心" /><h1 className="admin-title">组织管理</h1></div><p className="admin-copy">管理成员、应用和最近操作。</p></div><nav className="admin-header-actions" aria-label="快捷入口"><a href="/admin/invitations" className="secondary-link">邀请成员 <span aria-hidden="true">↗</span></a></nav></header>
     <nav className="admin-nav" aria-label="管理内容"><a href="#applications">应用 <span>{clients.length}</span></a><a href="#members">成员 <span>{users.length}</span></a><a href="#activity">操作记录</a></nav>
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     {credential ? <section className="secret-panel" role="status"><strong>请立即保存，仅显示一次</strong><code>client_id: {credential.clientId}</code>{credential.clientSecret ? <code>client_secret: {credential.clientSecret}</code> : null}{credential.webhookSecret ? <code>webhook_secret: {credential.webhookSecret}</code> : null}<button className="secondary-button" onClick={() => setCredential(undefined)}>我已保存</button></section> : null}

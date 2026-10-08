@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import NextImage from "next/image";
-import Link from "next/link";
-import { BrandMark } from "@/components/brand-mark";
 import { ProfileUsernameForm } from "@/components/profile-username-form";
 import { ProfileEmailForm } from "@/components/profile-email-form";
 import { ProfilePasswordForm } from "@/components/profile-password-form";
 import { ProfileEditDialog } from "@/components/profile-edit-dialog";
+import { PageBackLink } from "@/components/page-back-link";
 
 const OUTPUT_SIZE = 512;
 
@@ -174,16 +173,10 @@ export function ProfileAvatarForm({
 
   return <section className="profile-page">
     <header className="profile-page-header">
-      <Link className="brand" href="/">
-        <BrandMark />
-        HFLive Auth
-      </Link>
-      {returnTo ? (
-        <Link className="secondary-link profile-return-link" href={returnTo}>
-          <span>完成并返回</span>
-          <strong>{returnAppName ?? "已连接的应用"}</strong>
-        </Link>
-      ) : <Link className="secondary-link" href="/">返回首页</Link>}
+      <div className="page-heading">
+        <PageBackLink href={returnTo ?? "/"} label={returnTo ? `返回${returnAppName ?? "已连接的应用"}` : "返回首页"} />
+        <h1 className="profile-page-title">个人资料</h1>
+      </div>
     </header>
 
     <div className="panel profile-hero">
@@ -192,8 +185,7 @@ export function ProfileAvatarForm({
         {storageEnabled ? <button className="profile-inline-action" type="button" onClick={() => { setError(undefined); setAvatarOpen(true); }}>更改头像</button> : null}
       </div>
       <div className="profile-hero-copy">
-        <p className="eyebrow">个人资料</p>
-        <h1 className="profile-title"><span className="profile-title-name">{name}</span>{profile.platformRole === "ADMIN" && (profile.identityLabel || profile.realName) ? <small className="profile-identity-meta">({[profile.identityLabel, profile.realName].filter(Boolean).join(" ")})</small> : null}</h1>
+        <h2 className="profile-title"><span className="profile-title-name">{name}</span>{profile.platformRole === "ADMIN" && (profile.identityLabel || profile.realName) ? <small className="profile-identity-meta">({[profile.identityLabel, profile.realName].filter(Boolean).join(" ")})</small> : null}</h2>
         <p className="profile-handle">@{username ?? "未设置用户名"}</p>
       </div>
     </div>
