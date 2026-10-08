@@ -881,3 +881,15 @@
 - 真实 Chromium 使用临时 Next.js 展示路由及测试资料检查 1280px、390px、320px 下的资料/管理/邀请标题、无横向溢出、Tab/Enter 返回和模拟保存错误后的 Esc 关闭；桌面与手机截图已生成。临时展示路由已移除，删除残留的开发路由类型后生产构建成功。未连接真实账号数据库或验证跨站 LiveBoard 跳转，未提交或部署。
 
 - PR 准备阶段确认旧密码入口 PR #41 已合并且当前树与最新 `origin/main` 一致；复跑 `pnpm validate`（64 项通过、41 项环境专项跳过）和临时独立密钥下 `pnpm build` 均通过，本轮界面调整单独提交。
+
+## 2026-10-08 邀请用户名与身份资料选填
+
+- 创建邀请支持省略、null 或空白用户名，条件构造占用查询，避免未指定用户名时 Prisma 的 undefined 条件误匹配；邮件区分管理员指定与成员自选路径。
+- Invitation 新增可空 identityLabel/realName 与 migration；管理员表单增加折叠选填区域，列表与接受页面展示资料，接受端仅采用数据库中的管理员资料。保持 USER 权限和既有 OIDC 身份契约。
+- 接受事务补充有效邀请预留检查并使用 Serializable；接受表单补充网络错误与恢复可重试按钮。
+- 验证：`pnpm validate` 64 项通过，`pnpm test:invitations` 4 项通过，最终 `pnpm build` 通过；隔离 PostgreSQL 16 的空库 10 项 migration 和含旧邀请的 9→10 升级通过。
+- 完整 `pnpm oidc:smoke:phase4` 通过授权码、PKCE、state、nonce、consent、token、refresh 与 claims。第一次运行时本机启用邮件，风险登录进入 OTP 而 smoke 脚本要求直登，因此授权跳回登录；改用本机明确关闭邮件的自部署测试配置后通过，未改变认证代码或断言。
+- 真实 Chromium 验证 1280/390/320px、键盘展开与提交、重复邀请错误、指定/未指定用户名接受、失效链接、网络失败后重试及无页面错误；人工查看最终手机截图。邮件仅进入本机 HTTP 接收器。
+- 本地分支 `codex/optional-invitation-identity`；未提交、推送或部署到生产。临时服务和临时安全配置于验收后清理。
+
+- PR 准备阶段复跑 `pnpm validate`（64 项通过）与 `git diff --check`；使用当前 GitHub 账号的 noreply 邮箱提交，分支送往 Draft PR 审查，不合并或部署。

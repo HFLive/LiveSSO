@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 type Invitation = {
-  id: string; email: string; username: string | null;
+  id: string; email: string; username: string | null; identityLabel: string | null; realName: string | null;
   status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
   createdAt: string | Date; expiresAt: string | Date;
   acceptedAt: string | Date | null; revokedAt: string | Date | null;
@@ -54,6 +54,7 @@ export function InvitationList({ initialInvitations }: { initialInvitations: Inv
       return <article className="invitation-record" key={item.id}>
         <div className="invitation-record-main"><strong>{item.email}</strong><span className={status === "PENDING" ? "badge" : status === "REVOKED" ? "badge danger" : "badge muted"}>{labels[status]}</span></div>
         <div className="invitation-record-meta"><span>用户名 <code>{item.username ?? "未指定"}</code></span><span>发送 {formatter.format(new Date(item.createdAt))}</span><span>{status === "PENDING" ? "到期" : status === "ACCEPTED" ? "接受" : status === "REVOKED" ? "撤回" : "到期"} {formatter.format(new Date(status === "ACCEPTED" ? item.acceptedAt ?? item.expiresAt : status === "REVOKED" ? item.revokedAt ?? item.expiresAt : item.expiresAt))}</span></div>
+        {item.identityLabel || item.realName ? <p className="field-help">身份资料：{[item.identityLabel, item.realName].filter(Boolean).join(" · ")}</p> : null}
         {active ? <div className="invitation-record-actions">{confirming === item.id ? <><span>撤回后链接立即失效，用户名和邮箱释放。</span><button type="button" onClick={() => void revoke(item.id)} disabled={pending === item.id}>{pending === item.id ? "撤回中…" : "确认撤回"}</button><button type="button" onClick={() => setConfirming(undefined)} disabled={pending === item.id}>取消</button></> : <button type="button" onClick={() => setConfirming(item.id)}>撤回邀请</button>}</div> : null}
       </article>;
     })}</div>}

@@ -590,3 +590,7 @@ h1 {
   .admin-nav { overflow-x: auto; flex-wrap: nowrap; }
   .admin-nav a { flex: none; }
 }
+
+.invitation-identity-option { margin-bottom: 20px; border-block: 1px solid var(--line); padding: 14px 0; }
+.invitation-identity-option summary { cursor: pointer; font-size: 14px; }
+.invitation-identity-option[open] summary { margin-bottom: 12px; }

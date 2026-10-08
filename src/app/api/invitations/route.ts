@@ -15,9 +15,13 @@ import { expireStaleInvitations } from "@/lib/security/domain-store";
 import { requirePlatformAdmin } from "@/lib/security/admin";
 import { listInvitations } from "@/lib/security/invitation-management";
 
+const optionalDetail = (max: number) => z.string().max(max).refine((value) => !/[\u0000-\u001f\u007f]/.test(value)).transform((value) => value.trim().replace(/\s+/g, " ") || null).nullable().optional();
+
 const inputSchema = z.object({
   email: z.email().max(254),
-  username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
+  username: z.string().trim().max(32).refine((value) => value === "" || /^[a-zA-Z0-9_]{3,32}$/.test(value)).transform((value) => value || null).nullable().optional(),
+  identityLabel: optionalDetail(40),
+  realName: optionalDetail(80),
   expiresIn: z.enum(["2h", "1d", "7d", "30d"]).default("7d"),
 });
 
@@ -41,8 +45,8 @@ export async function POST(request: Request) {
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   const email = parsed.data.email.trim().toLowerCase();
-  const username = parsed.data.username.trim();
-  const normalizedUsername = username.toLowerCase();
+  const username = parsed.data.username ?? null;
+  const normalizedUsername = username?.toLowerCase();
   const duration: InvitationDuration = parsed.data.expiresIn;
   const now = new Date();
   const expiresAt = invitationExpiry(duration, now);
@@ -53,7 +57,7 @@ export async function POST(request: Request) {
       const existingUser = await transaction.user.findFirst({
         where: { OR: [
           { email: { equals: email, mode: "insensitive" } },
-          { username: { equals: normalizedUsername, mode: "insensitive" } },
+          ...(normalizedUsername ? [{ username: { equals: normalizedUsername, mode: "insensitive" as const } }] : []),
         ] }, select: { id: true },
       });
       if (existingUser) throw new InvitationAccountExistsError();
@@ -63,7 +67,7 @@ export async function POST(request: Request) {
           status: "PENDING",
           OR: [
             { normalizedEmail: email },
-            { username: { equals: normalizedUsername, mode: "insensitive" } },
+            ...(normalizedUsername ? [{ username: { equals: normalizedUsername, mode: "insensitive" as const } }] : []),
           ],
         },
         select: { id: true },
@@ -75,6 +79,8 @@ export async function POST(request: Request) {
           email,
           normalizedEmail: email,
           username,
+          identityLabel: parsed.data.identityLabel ?? null,
+          realName: parsed.data.realName ?? null,
           tokenDigest: digestSensitiveValue("invitation-token", rawToken, getSecurityHashSecret()),
           invitedById: actor.id,
           grantedRole: "USER",
@@ -99,7 +105,7 @@ export async function POST(request: Request) {
       await sendTransactionalMail({
         to: email,
         subject: "邀请你创建 HFLive Auth 账号",
-        text: `管理员邀请你创建 HFLive Auth 账号，并为你指定了用户名 ${username}。\n\n请在 ${INVITATION_DURATIONS[duration].label}内打开以下链接设置显示名和密码：\n${url}\n\n此链接只能使用一次。`,
+        text: `管理员邀请你创建 HFLive Auth 账号。${username ? `指定的用户名为 ${username}。` : "请自行选择登录用户名。"}\n\n请在 ${INVITATION_DURATIONS[duration].label}内打开以下链接设置${username ? "显示名和密码" : "用户名、显示名和密码"}：\n${url}\n\n此链接只能使用一次。`,
       });
     } catch (error) {
       await prisma.invitation.updateMany({ where: { id: invitation.id, status: "PENDING" }, data: { status: "REVOKED", revokedAt: new Date() } });

@@ -10,13 +10,13 @@ export async function listInvitations(database: PrismaClient) {
     database.invitation.findMany({
       where: { status: "PENDING", expiresAt: { gt: now } },
       orderBy: { createdAt: "desc" },
-      select: { id: true, email: true, username: true, status: true, createdAt: true, expiresAt: true, acceptedAt: true, revokedAt: true },
+      select: { id: true, email: true, username: true, identityLabel: true, realName: true, status: true, createdAt: true, expiresAt: true, acceptedAt: true, revokedAt: true },
     }),
     database.invitation.findMany({
       where: { OR: [{ status: { not: "PENDING" } }, { expiresAt: { lte: now } }] },
       orderBy: { createdAt: "desc" },
       take: 30,
-      select: { id: true, email: true, username: true, status: true, createdAt: true, expiresAt: true, acceptedAt: true, revokedAt: true },
+      select: { id: true, email: true, username: true, identityLabel: true, realName: true, status: true, createdAt: true, expiresAt: true, acceptedAt: true, revokedAt: true },
     }),
   ]);
   const unique = new Map([...pending, ...recent].map((item) => [item.id, item]));

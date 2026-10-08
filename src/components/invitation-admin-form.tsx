@@ -14,7 +14,7 @@ export function InvitationAdminForm() {
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
-      const response = await fetch("/api/invitations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), username: data.get("username"), expiresIn: data.get("expiresIn") }) });
+      const response = await fetch("/api/invitations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), username: data.get("username"), identityLabel: data.get("identityLabel"), realName: data.get("realName"), expiresIn: data.get("expiresIn") }) });
       const result = await response.json().catch(() => ({})) as { error?: string; expiresIn?: InvitationDuration };
       if (!response.ok) {
         setError(invitationErrorMessage(result.error));
@@ -29,7 +29,12 @@ export function InvitationAdminForm() {
     }
   }
   return <form onSubmit={submit}>{message ? <div className="top-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="关闭提示" onClick={() => setMessage(undefined)}>×</button></div> : null}<div className="field"><label htmlFor="email">成员邮箱</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
-    <div className="field"><label htmlFor="username">指定用户名</label><input id="username" name="username" minLength={3} maxLength={32} pattern="[A-Za-z0-9_]+" autoCapitalize="none" autoComplete="off" required /><p className="field-help">3–32 位，只能使用英文字母、数字和下划线。受邀者不能修改。</p></div>
+    <div className="field"><label htmlFor="username">指定用户名（可选）</label><input id="username" name="username" minLength={3} maxLength={32} pattern="[A-Za-z0-9_]+" autoCapitalize="none" autoComplete="off" /><p className="field-help">留空由受邀者自行选择；填写时为 3–32 位英文字母、数字或下划线，受邀者不能修改。</p></div>
+    <details className="invitation-identity-option"><summary>指定身份资料（可选）</summary>
+      <p className="field-help">资料在接受邀请后写入账号，仅管理员可以修改。</p>
+      <div className="field"><label htmlFor="identityLabel">身份标签</label><input id="identityLabel" name="identityLabel" maxLength={40} placeholder="例如：教师" /></div>
+      <div className="field"><label htmlFor="realName">真名</label><input id="realName" name="realName" maxLength={80} autoComplete="off" placeholder="可留空" /></div>
+    </details>
     <div className="field"><label htmlFor="expiresIn">链接有效期</label><select id="expiresIn" name="expiresIn" defaultValue="7d">
       {Object.entries(INVITATION_DURATIONS).map(([value, option]) => <option key={value} value={value}>{option.label}</option>)}
     </select><p className="field-help">到期未注册时，邮箱和用户名会在下一次邀请时自动释放。</p></div>
