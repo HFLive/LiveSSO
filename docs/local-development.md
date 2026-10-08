@@ -163,3 +163,7 @@ Compose 内 app 默认通过 `http://minio:9000` 访问对象存储。宿主机 
 ### 用户名修改专项验证
 
 `pnpm test:username` 使用已迁移的 disposable PostgreSQL，关闭邮件发送，验证管理员权限、格式、大小写重名、邀请预留/过期、并发争用、审计/资料事件，以及旧用户名拒绝、新用户名与邮箱登录。CI integration job 执行该套件。后台 UI 还需检查桌面/手机编辑、保存、取消、错误提示与键盘操作；认证改动继续运行完整 `pnpm oidc:smoke`。
+
+### 邀请可选资料验证
+
+`pnpm test:invitations` 在 disposable PostgreSQL 覆盖省略/null/空白用户名、选填身份标签和真名、字段长度与控制字符、接受时忽略伪造资料、并发单次消费及其他邀请的用户名预留。邮件在该专项中使用 mock；浏览器验收可使用仅监听本机的 HTTP 邮件接收器。运行前先部署全部 migration；认证回归继续执行完整 `pnpm oidc:smoke`。

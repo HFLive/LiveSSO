@@ -1,6 +1,7 @@
 import { hashPassword } from "better-auth/crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 import { sendSecurityNotice } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { consumeInvitation } from "@/lib/security/domain-store";
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
       if (!invitation) throw new Error("INVALID_INVITATION");
       const displayUsername = invitation.username ?? parsed.data.username;
       if (!displayUsername) throw new Error("INVALID_INVITATION");
+      const reserved = await transaction.invitation.findFirst({
+        where: { id: { not: id }, status: "PENDING", expiresAt: { gt: new Date() }, username: { equals: displayUsername, mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (reserved) throw new Error("INVALID_INVITATION");
       const created = await transaction.user.create({
         data: {
           email: invitation.normalizedEmail,
@@ -36,6 +42,8 @@ export async function POST(request: Request) {
           username: displayUsername.toLowerCase(),
           displayUsername,
           name: parsed.data.name,
+          identityLabel: invitation.identityLabel,
+          realName: invitation.realName,
           platformRole: "USER",
           accounts: {
             create: { providerId: "credential", accountId: invitation.normalizedEmail, password },
@@ -57,7 +65,7 @@ export async function POST(request: Request) {
         },
       });
       return created;
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     await sendSecurityNotice(user.email, "你的 HFLive Auth 账号已通过邀请创建。" ).catch(() => undefined);
     return NextResponse.json({ status: true });
   } catch {

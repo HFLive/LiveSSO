@@ -16,7 +16,7 @@ export default async function InvitationsPage() {
   const invitations = await listInvitations(prisma);
   return <main className="invitation-shell">
     <header className="invitation-header"><div><p className="eyebrow">管理员</p><div className="page-heading"><PageBackLink href="/admin" label="返回管理控制台" /><h1 className="auth-title">成员邀请</h1></div><p className="auth-copy">发送邀请、查看状态和撤回尚未接受的邀请。</p></div></header>
-    <div className="invitation-grid"><section className="panel invitation-form-panel"><h2>发送邀请</h2><p className="admin-copy">指定成员邮箱、全局用户名和有效期。受邀账号始终以普通用户权限创建。</p><InvitationAdminForm /></section>
+    <div className="invitation-grid"><section className="panel invitation-form-panel"><h2>发送邀请</h2><p className="admin-copy">填写成员邮箱和有效期，可选指定用户名、身份标签和真名。受邀账号始终以普通用户权限创建。</p><InvitationAdminForm /></section>
     <InvitationList initialInvitations={invitations} /></div>
   </main>;
 }

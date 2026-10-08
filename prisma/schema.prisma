@@ -116,6 +116,8 @@ model Invitation {
   email           String
   normalizedEmail String
   username        String?          @db.VarChar(32)
+  identityLabel   String?          @db.VarChar(40)
+  realName        String?          @db.VarChar(80)
   tokenDigest     String           @unique @db.VarChar(80)
   status          InvitationStatus @default(PENDING)
   grantedRole     PlatformRole     @default(USER)
