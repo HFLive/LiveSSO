@@ -39,7 +39,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   if (user?.accountStatus !== "ACTIVE") redirect("/error?code=forbidden");
   const pendingEmail = await getPendingEmailChange(prisma, session.user.id);
   return (
-    <main className="profile-shell">
+    <main className="profile-shell" id="main-content">
       <ProfileAvatarForm
         profile={{
           name: user.name,

@@ -33,7 +33,7 @@ export function AdminIdentityDetailsForm({ userId, identityLabel, realName, onUp
     <small>{[identityLabel, realName].filter(Boolean).join(" · ") || "未设置标签和真名"}</small>
     {!editing ? <button type="button" onClick={() => setEditing(true)}>设置身份资料</button> :
       <form onSubmit={submit}>
-        <label>标签<input name="identityLabel" defaultValue={identityLabel ?? ""} maxLength={40} disabled={pending} placeholder="例如：教师" /></label>
+        <label>标签<input name="identityLabel" defaultValue={identityLabel ?? ""} maxLength={40} disabled={pending} placeholder="例如：教师" autoFocus /></label>
         <label>真名<input name="realName" defaultValue={realName ?? ""} maxLength={80} disabled={pending} placeholder="可留空" /></label>
         <div className="compact-actions"><button disabled={pending}>{pending ? "保存中…" : "保存"}</button><button type="button" disabled={pending} onClick={() => { setEditing(false); setError(undefined); }}>取消</button></div>
         {error ? <small className="form-error" role="alert">{error}</small> : null}

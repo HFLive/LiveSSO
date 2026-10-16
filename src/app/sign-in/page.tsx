@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { BrandMark } from "@/components/brand-mark";
+import { AuthFrame } from "@/components/auth-frame";
 import { SignInForm } from "@/components/sign-in-form";
 import { resolveAuthenticatedDestination } from "@/lib/authenticated-destination";
 import { auth } from "@/lib/auth";
@@ -31,17 +30,14 @@ export default async function SignInPage({
   }
 
   return (
-    <main className="auth-main auth-entry">
-      <Link className="brand auth-brand" href="/"><BrandMark />HFLive Auth</Link>
-      <section className="panel auth-card">
+    <AuthFrame featured>
         <p className="eyebrow">欢迎回来</p>
-        <h1 className="auth-title">登录</h1>
-        <p className="auth-copy">使用 HFLive Auth 账号继续。</p>
+        <h1 className="auth-title">登录你的账号</h1>
+        <p className="auth-copy">登录后，继续访问你的组织应用。</p>
 
         <SignInForm />
 
-        <p className="auth-help">还没有账号？请使用管理员发来的邀请链接。</p>
-      </section>
-    </main>
+        <p className="auth-help">首次使用？<br />请通过管理员发送的邀请链接创建账号。</p>
+    </AuthFrame>
   );
 }

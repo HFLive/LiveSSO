@@ -28,7 +28,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body className={`${sans.variable} ${mono.variable}`}>{children}</body>
+      <body className={`${sans.variable} ${mono.variable}`}>
+        <a className="skip-link" href="#main-content">跳到主要内容</a>
+        {children}
+      </body>
     </html>
   );
 }

@@ -179,33 +179,42 @@ export function ProfileAvatarForm({
       </div>
     </header>
 
-    <div className="panel profile-hero">
+    <div className="profile-hero">
       <div className="profile-avatar-action">
         <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
         {storageEnabled ? <button className="profile-inline-action" type="button" onClick={() => { setError(undefined); setAvatarOpen(true); }}>更改头像</button> : null}
       </div>
       <div className="profile-hero-copy">
+        <p className="eyebrow">你的 HFLive 账号</p>
         <h2 className="profile-title"><span className="profile-title-name">{name}</span>{profile.platformRole === "ADMIN" && (profile.identityLabel || profile.realName) ? <small className="profile-identity-meta">({[profile.identityLabel, profile.realName].filter(Boolean).join(" ")})</small> : null}</h2>
         <p className="profile-handle">@{username ?? "未设置用户名"}</p>
+        <p className="profile-hero-note">更新后的资料会同步到已连接的应用。</p>
       </div>
     </div>
 
     <div className="profile-grid">
-      <div className="panel profile-details" id="basic">
+      <div className="profile-details" id="basic">
         <div className="section-heading">
-          <div><p className="eyebrow">基本资料</p><h2>账号信息</h2></div>
+          <div><p className="eyebrow">01 / PROFILE</p><h2>基本资料</h2><p className="section-description">你在 HFLive 应用中展示的个人信息。</p></div>
         </div>
         <dl className="profile-data-list">
           <div className="profile-name-row"><dt>显示名</dt><dd><span>{name}</span><button className="profile-inline-action" type="button" onClick={() => { setNameDraft(name); setNameError(undefined); setNameOpen(true); }}>更改</button></dd></div>
-          <div><dt>登录用户名</dt><dd><span>@{username ?? "未设置"}</span><ProfileUsernameForm username={username} onUpdated={setUsername} onNotice={setNotice} /></dd></div>
           {profile.platformRole === "ADMIN" ? <div><dt>身份资料</dt><dd>{[profile.identityLabel, profile.realName].filter(Boolean).join(" · ") || "管理员尚未设置"}</dd></div> : null}
+          {profile.platformRole === "ADMIN" ? <div><dt>账号类型</dt><dd>管理员</dd></div> : null}
+          <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
+        </dl>
+      </div>
+      <div className="profile-details" id="security">
+        <div className="section-heading">
+          <div><p className="eyebrow">02 / SECURITY</p><h2>登录与安全</h2><p className="section-description">管理登录方式，保持账号安全。</p></div>
+        </div>
+        <dl className="profile-data-list">
+          <div><dt>登录用户名</dt><dd><span>@{username ?? "未设置"}</span><ProfileUsernameForm username={username} onUpdated={setUsername} onNotice={setNotice} /></dd></div>
           <div><dt>邮箱</dt><dd>
             <span className="profile-email-value">{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></span>
             <ProfileEmailForm mailEnabled={mailEnabled} initialPending={pendingEmail} currentEmail={profile.email} onNotice={setNotice} />
           </dd></div>
           <div id="password"><dt>密码</dt><dd><span>使用密码登录</span><ProfilePasswordForm initialOpen={initialPasswordOpen} onNotice={setNotice} /></dd></div>
-          {profile.platformRole === "ADMIN" ? <div><dt>账号类型</dt><dd>管理员</dd></div> : null}
-          <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
         </dl>
       </div>
 

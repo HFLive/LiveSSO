@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { InvitationAdminForm } from "@/components/invitation-admin-form";
+import Link from "next/link";
+import { AdminPageShell, AdminPagination, AdminSearch } from "@/components/admin-page-shell";
 import { InvitationList } from "@/components/invitation-list";
-import { PageBackLink } from "@/components/page-back-link";
-import { auth } from "@/lib/auth";
+import { requireAdminPage } from "@/lib/admin-page";
+import { adminHref, adminPagination, adminSearchValue, type AdminSearchParams } from "@/lib/admin-pagination";
 import { prisma } from "@/lib/prisma";
-import { listInvitations } from "@/lib/security/invitation-management";
+import type { Prisma } from "@/generated/prisma/client";
+
 export const metadata: Metadata = { title: "成员邀请" };
-export default async function InvitationsPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in?returnTo=/admin/invitations");
-  const actor = await prisma.user.findUnique({ where: { id: session.user.id }, select: { platformRole: true, accountStatus: true } });
-  if (actor?.platformRole !== "ADMIN" || actor.accountStatus !== "ACTIVE") redirect("/error?code=forbidden");
-  const invitations = await listInvitations(prisma);
-  return <main className="invitation-shell">
-    <header className="invitation-header"><div><p className="eyebrow">管理员</p><div className="page-heading"><PageBackLink href="/admin" label="返回管理控制台" /><h1 className="auth-title">成员邀请</h1></div><p className="auth-copy">发送邀请、查看状态和撤回尚未接受的邀请。</p></div></header>
-    <div className="invitation-grid"><section className="panel invitation-form-panel"><h2>发送邀请</h2><p className="admin-copy">填写成员邮箱和有效期，可选指定用户名、身份标签和真名。受邀账号始终以普通用户权限创建。</p><InvitationAdminForm /></section>
-    <InvitationList initialInvitations={invitations} /></div>
-  </main>;
+export default async function InvitationsPage({ searchParams }: { searchParams: Promise<AdminSearchParams> }) {
+  const params = await searchParams;
+  const q = adminSearchValue(params, "q");
+  const state = adminSearchValue(params, "state") === "history" ? "history" : "active";
+  await requireAdminPage(adminHref("/admin/invitations", { q, state, page: adminSearchValue(params, "page") }));
+  const now = new Date();
+  const where: Prisma.InvitationWhereInput = { AND: [
+    state === "active" ? { status: "PENDING", expiresAt: { gt: now } } : { OR: [{ status: { not: "PENDING" } }, { expiresAt: { lte: now } }] },
+    q ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { username: { contains: q, mode: "insensitive" } }] } : {},
+  ] };
+  const pagination = adminPagination(adminSearchValue(params, "page"), await prisma.invitation.count({ where }));
+  const records = await prisma.invitation.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: pagination.skip, take: pagination.take, select: { id: true, email: true, username: true, identityLabel: true, realName: true, status: true, createdAt: true, expiresAt: true, acceptedAt: true, revokedAt: true } });
+  const invitations = records.map((item) => ({ ...item, status: item.status === "PENDING" && item.expiresAt <= now ? "EXPIRED" as const : item.status }));
+  return <AdminPageShell active="invitations" title="邀请" description="查看邀请状态，撤回尚未接受的邀请。" action={<Link className="primary-button" href="/admin/invitations/new">发送邀请</Link>}>
+    <AdminSearch path="/admin/invitations" query={q} clearHref={adminHref("/admin/invitations", { state })} placeholder="搜索邀请邮箱或用户名"><select name="state" defaultValue={state} aria-label="邀请状态"><option value="active">待接受</option><option value="history">历史记录</option></select></AdminSearch>
+    <InvitationList initialInvitations={invitations} />
+    <AdminPagination pagination={pagination} path="/admin/invitations" query={{ q, state }} noun="条邀请" />
+  </AdminPageShell>;
 }

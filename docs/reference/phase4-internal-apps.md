@@ -1,11 +1,12 @@
 # Phase 4 内部应用、Directory API 与事件参考
 
 状态：已实现  
-最后更新：2026-09-25
+最后更新：2026-10-16
 
 ## Client 管理
 
-- `/admin` 与 `/api/admin/*` 只允许 `ACTIVE + ADMIN` 平台账号访问；普通 OIDC 登录和应用角色不会获得该权限。
+- `/admin` 转到 `/admin/applications`；应用、成员、邀请与操作记录分别位于 `/admin/applications`、`/admin/members`、`/admin/invitations`、`/admin/activity`。所有管理页面（包括创建、详情）及 `/api/admin/*` 只允许 `ACTIVE + ADMIN` 平台账号访问；每个页面在查询数据前重新检查权限，普通 OIDC 登录和应用角色不会获得该权限。
+- 应用与成员列表每页 15 项，操作记录每页 20 条，服务端按搜索条件计数并只读取当前页；创建和单项编辑采用独立页面。URL 保存搜索、页码与应用设置分类，返回列表保留原上下文。
 - 管理员审批并创建 confidential client。OAuth secret 使用 32 字节随机值，响应带 `no-store`，数据库只保存 SHA-256 base64url 摘要；创建或轮换响应结束后不可再次读取。
 - 登录 client 使用 authorization code + PKCE，redirect URI 逐字精确匹配。授权请求在进入登录流程前验证 client 已审批、未停用、回调和 scope 均在白名单。
 - consent 页面从已审批且启用的 client 记录读取管理员配置的应用名称；用户看到的是 `LiveBoard Production` 这类可信名称，而不是内部 `client_id`。协议请求仍使用真实 `client_id`，但它不作为页面上的应用名称展示。
@@ -62,7 +63,7 @@ pnpm test:phase4
 
 ## 管理员修改登录用户名
 
-- `/admin` → 用户管理 → 修改用户名。只允许有效平台管理员操作，可修改自己或其他成员的登录用户名。
+- `/admin/members` → 选择成员 → 修改用户名。只允许有效平台管理员操作，可修改自己或其他成员的登录用户名。
 - `PATCH /api/admin/users/{userId}` 接受 `{ "username": "new_username" }`，与 `{ "accountStatus": "ACTIVE" }` 是互斥操作；请求必须提供与请求 URL 同源的 `Origin`。额外字段被拒绝。
 - 去除首尾空白后，用户名必须为 3–32 位 ASCII 字母、数字或下划线。`username` 小写存储，`displayUsername` 保留输入大小写；仅大小写变化视为无操作。
 - 大小写不敏感检查其他用户及未到期 PENDING 邀请。用户名修改和邀请创建均在 Serializable 事务内读写占用状态，避免并发分配；唯一冲突和序列化冲突返回 409，后者提示重试。
