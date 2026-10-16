@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-labelledby="title desc">
+<title id="title">HFLive Auth 新旧 favicon 对比</title><desc id="desc">保留斜切语言的 H 字母图标，暖白底与石墨色图形；展示原图、新图和深浅背景下的实际小尺寸。</desc>
+<defs><symbol id="new" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#ece9e2"/>
+  <path d="M12 12h12v10l16 8V12h12v40H40V42l-16-8v18H12Z" fill="#20201e"/>
+</symbol>
+<symbol id="old" viewBox="0 0 64 64"><path d="m18 11 31 15v10L18 21V11ZM12 26l31 15v10L12 36V26Zm0 16 20 10v10L12 52V42Z" fill="currentColor"/></symbol></defs>
+<rect width="960" height="640" rx="24" fill="#191918"/>
+<g font-family="Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">
+<text x="40" y="45" fill="#ece9e2" font-size="12" letter-spacing="2">HFLIVE AUTH / IDENTITY</text>
+<text x="40" y="90" fill="#f1f5f1" font-size="30" font-weight="600">让一个 H，成为入口。</text>
+<text x="920" y="86" text-anchor="end" fill="#aaa89f" font-size="14">Favicon · SVG</text>
+<rect x="40" y="120" width="280" height="276" rx="16" fill="#20201e"/>
+<text x="64" y="155" fill="#aaa89f" font-size="13">原版 · 分离的斜带</text>
+<use href="#old" x="116" y="192" width="128" height="128" color="#f1f5f1"/>
+<text x="180" y="366" fill="#aaa89f" font-size="13" text-anchor="middle">轮廓偏窄，重心偏下</text>
+<rect x="336" y="120" width="280" height="276" rx="16" fill="#272724"/>
+<text x="360" y="155" fill="#ece9e2" font-size="13">新版 · 斜桥 H</text>
+<use href="#new" x="412" y="192" width="128" height="128"/>
+<text x="476" y="366" fill="#eeece6" font-size="13" text-anchor="middle">完整轮廓，保留斜向连接</text>
+<text x="656" y="160" fill="#f1f5f1" font-size="20" font-weight="600">HFLive Auth</text>
+<text x="656" y="195" fill="#aaa89f" font-size="14">H · HFLive 的首字母</text>
+<text x="656" y="224" fill="#aaa89f" font-size="14">桥 · 连接统一身份与应用</text>
+<rect x="656" y="268" width="28" height="28" rx="7" fill="#ece9e2"/>
+<text x="696" y="287" fill="#eeece6" font-size="13">暖白 #ECE9E2</text>
+<rect x="656" y="312" width="28" height="28" rx="7" fill="#20201e" stroke="#344b3c"/>
+<text x="696" y="331" fill="#eeece6" font-size="13">石墨色 #20201E</text>
+<rect x="40" y="416" width="432" height="184" rx="16" fill="#1b221e"/>
+<text x="64" y="451" fill="#eeece6" font-size="13">深色背景 · 实际尺寸</text>
+<use href="#new" x="84" y="490" width="16" height="16"/><text x="92" y="542" text-anchor="middle" fill="#aaa89f" font-size="12">16px</text>
+<use href="#new" x="156" y="488" width="20" height="20"/><text x="166" y="542" text-anchor="middle" fill="#aaa89f" font-size="12">20px</text>
+<use href="#new" x="228" y="486" width="24" height="24"/><text x="240" y="542" text-anchor="middle" fill="#aaa89f" font-size="12">24px</text>
+<use href="#new" x="300" y="482" width="32" height="32"/><text x="316" y="542" text-anchor="middle" fill="#aaa89f" font-size="12">32px</text>
+<rect x="488" y="416" width="432" height="184" rx="16" fill="#f2f5ef"/>
+<text x="512" y="451" fill="#3c4c40" font-size="13">浅色背景 · 实际尺寸</text>
+<use href="#new" x="532" y="490" width="16" height="16"/><text x="540" y="542" text-anchor="middle" fill="#536457" font-size="12">16px</text>
+<use href="#new" x="604" y="488" width="20" height="20"/><text x="614" y="542" text-anchor="middle" fill="#536457" font-size="12">20px</text>
+<use href="#new" x="676" y="486" width="24" height="24"/><text x="688" y="542" text-anchor="middle" fill="#536457" font-size="12">24px</text>
+<use href="#new" x="748" y="482" width="32" height="32"/><text x="764" y="542" text-anchor="middle" fill="#536457" font-size="12">32px</text>
+</g></svg>

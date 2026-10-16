@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthFrame } from "@/components/auth-frame";
 import { Suspense } from "react";
 import { ConsentForm } from "@/components/consent-form";
 import { prisma } from "@/lib/prisma";
@@ -13,8 +14,7 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
   const clientName = await getApprovedClientDisplayName(prisma, clientId);
 
   return (
-    <main className="auth-main">
-      <section className="panel auth-card">
+    <AuthFrame>
         <p className="eyebrow">HFLive Auth 授权</p>
         <h1 className="auth-title">{clientName ?? "未知应用"} 想要使用你的 HFLive Auth 账号</h1>
         <p className="auth-copy">继续后，此应用将可以：</p>
@@ -22,7 +22,6 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
           <ConsentForm />
         </Suspense>
         <p className="fine-print consent-note">只向你认识且正在使用的应用授权。</p>
-      </section>
-    </main>
+    </AuthFrame>
   );
 }
