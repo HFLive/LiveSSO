@@ -109,6 +109,7 @@ export async function consumeLoginChallenge(
       bindingDigest: input.bindingDigest,
       otpDigest: input.otpDigest,
       status: "PENDING",
+      user: { accountStatus: "ACTIVE" },
       expiresAt: { gt: now },
       attemptCount: { lt: database.loginChallenge.fields.maxAttempts },
       consumedAt: null,

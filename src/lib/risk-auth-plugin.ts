@@ -15,7 +15,7 @@ const TRUST_COOKIE = "hflive_trusted_device";
 const CHALLENGE_COOKIE = "hflive_login_challenge";
 const LOGIN_AUDIT_MS = 90 * 24 * 60 * 60 * 1_000;
 const CHALLENGE_MS = 10 * 60 * 1_000;
-const TRUST_MS = 30 * 24 * 60 * 60 * 1_000;
+export const TRUST_MS = 30 * 24 * 60 * 60 * 1_000;
 
 function randomToken(bytes = 32) {
   return randomBytes(bytes).toString("base64url");
@@ -218,11 +218,15 @@ export function riskAuthPlugin(): BetterAuthPlugin {
             throw APIError.from("UNAUTHORIZED", { code: "INVALID_CHALLENGE", message: "Invalid challenge" });
           }
 
-          const session = await ctx.context.internalAdapter.createSession(challenge.userId, false);
+          const rememberedUntil = ctx.body.trustDevice ? new Date(Date.now() + TRUST_MS) : undefined;
+          const session = await ctx.context.internalAdapter.createSession(
+            challenge.userId,
+            false,
+            rememberedUntil ? { expiresAt: rememberedUntil } : undefined,
+            true,
+          );
           if (!session) throw APIError.from("INTERNAL_SERVER_ERROR", { code: "SESSION_FAILED", message: "Session failed" });
-          await setSessionCookie(ctx, { session, user: challenge.user });
-          ctx.setCookie(CHALLENGE_COOKIE, "", cookieOptions(0));
-          if (ctx.body.trustDevice) {
+          if (rememberedUntil) {
             const raw = randomToken();
             const requestDigests = requestContext(ctx.request);
             await prisma.trustedDevice.create({
@@ -232,7 +236,7 @@ export function riskAuthPlugin(): BetterAuthPlugin {
                 userAgentDigest: requestDigests.userAgentDigest,
                 firstIpDigest: requestDigests.ipDigest,
                 lastIpDigest: requestDigests.ipDigest,
-                expiresAt: new Date(Date.now() + TRUST_MS),
+                expiresAt: rememberedUntil,
               },
             });
             ctx.setCookie(TRUST_COOKIE, raw, cookieOptions(TRUST_MS / 1_000));
@@ -244,6 +248,10 @@ export function riskAuthPlugin(): BetterAuthPlugin {
             request: ctx.request,
             metadata: { challenged: true, trustedDevice: ctx.body.trustDevice },
           });
+          await setSessionCookie(ctx, { session, user: challenge.user }, false, rememberedUntil
+            ? { maxAge: TRUST_MS / 1_000 }
+            : undefined);
+          ctx.setCookie(CHALLENGE_COOKIE, "", cookieOptions(0));
           await sendSecurityNotice(challenge.user.email, "检测到新设备或风险环境登录，邮箱验证码验证已通过。" ).catch(() => undefined);
           return ctx.json({ authenticated: true });
         },

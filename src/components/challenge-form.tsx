@@ -18,7 +18,7 @@ export function ChallengeForm() {
   }
   return <form onSubmit={submit}>
     <div className="field"><label htmlFor="otp">6 位验证码</label><input id="otp" name="otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></div>
-    <label className="checkbox-row"><input name="trustDevice" type="checkbox" defaultChecked />信任此设备 30 天</label>
+    <label className="checkbox-row"><input name="trustDevice" type="checkbox" />信任此设备并保持登录 30 天</label>
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     <button className="primary-button" disabled={pending}>{pending ? "正在验证…" : "验证并登录"}</button>
     <a className="form-link" href="/sign-in">返回登录</a>
