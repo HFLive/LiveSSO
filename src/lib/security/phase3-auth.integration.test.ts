@@ -12,6 +12,7 @@ suite("Phase 3 credential and risk login integration", () => {
   const email = `phase3-${runId}@example.invalid`;
   const username = `p3_${runId.replaceAll("-", "").slice(0, 20)}`;
   const password = "Phase3-test-password-2026";
+  const day = 24 * 60 * 60 * 1_000;
   let userId: string;
   let invitedUserId: string | undefined;
   let assignedInvitationId: string | undefined;
@@ -66,7 +67,7 @@ suite("Phase 3 credential and risk login integration", () => {
     }));
   }
 
-  it("creates a session directly for a stable trusted device", async () => {
+  it("creates an ordinary session for a trusted device after an IP change", async () => {
     const raw = `trusted-${runId}`;
     const ipDigest = digest("ip-address", "192.0.2.30", secret);
     await database.trustedDevice.create({
@@ -79,13 +80,31 @@ suite("Phase 3 credential and risk login integration", () => {
         expiresAt: new Date(Date.now() + 60_000),
       },
     });
-    const response = await signIn(`hflive_trusted_device=${raw}`);
+    const response = await signIn(`hflive_trusted_device=${raw}`, { ip: "192.0.2.31" });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ authenticated: true });
-    expect(response.headers.get("set-cookie")).toContain("better-auth.session_token");
+    const cookie = response.headers.getSetCookie().find((value) => value.startsWith("better-auth.session_token="));
+    expect(cookie?.includes(`Max-Age=${7 * day / 1_000}`)).toBe(true);
+    const session = await database.session.findFirstOrThrow({ where: { userId }, orderBy: { createdAt: "desc" } });
+    const now = Date.now();
+    await database.session.update({
+      where: { id: session.id },
+      data: { createdAt: new Date(now - 6 * day), updatedAt: new Date(now - 6 * day), expiresAt: new Date(now + day) },
+    });
+    const refreshed = await auth.handler(new Request("http://localhost:3000/api/auth/get-session", {
+      headers: { cookie: cookie!.split(";", 1)[0] },
+    }));
+    expect((await refreshed.json())?.user?.id).toBe(userId);
+    expect((await database.session.findUniqueOrThrow({ where: { id: session.id } })).expiresAt.getTime())
+      .toBeGreaterThanOrEqual(now + 7 * day);
+
+    const device = await database.trustedDevice.findUniqueOrThrow({
+      where: { tokenDigest: digest("trusted-device-token", raw, secret) },
+    });
+    expect(device.lastIpDigest).toBe(digest("ip-address", "192.0.2.31", secret));
   });
 
-  it("requires and consumes an email OTP for a new device", async () => {
+  it("requires an email OTP and keeps an opted-in session usable after eight idle days", async () => {
     const response = await signIn();
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ challengeRequired: true });
@@ -114,8 +133,33 @@ suite("Phase 3 credential and risk login integration", () => {
     }));
     expect(verified.status).toBe(200);
     expect(await verified.json()).toMatchObject({ authenticated: true });
-    expect(verified.headers.get("set-cookie")).toContain("better-auth.session_token");
+    const sessionCookie = verified.headers.getSetCookie().find((value) => value.startsWith("better-auth.session_token="));
+    expect(sessionCookie?.includes(`Max-Age=${30 * day / 1_000}`)).toBe(true);
     expect(await database.loginChallenge.count({ where: { userId, status: "CONSUMED" } })).toBe(1);
+
+    const session = await database.session.findFirstOrThrow({ where: { userId }, orderBy: { createdAt: "desc" } });
+    expect(session.expiresAt.getTime() - session.createdAt.getTime()).toBeGreaterThan(29 * day);
+    const cookie = sessionCookie!.split(";", 1)[0];
+    const readSession = () => auth.handler(new Request("http://localhost:3000/api/auth/get-session", { headers: { cookie } }));
+    const now = Date.now();
+    await database.session.update({
+      where: { id: session.id },
+      data: { createdAt: new Date(now - 8 * day), updatedAt: new Date(now - 8 * day), expiresAt: new Date(now + 22 * day) },
+    });
+    expect((await (await readSession()).json())?.user?.id).toBe(userId);
+
+    const createdAt = new Date(now - 29 * day);
+    const expiresAt = new Date(now + day);
+    await database.session.update({
+      where: { id: session.id },
+      data: { createdAt, updatedAt: createdAt, expiresAt },
+    });
+    expect((await (await readSession()).json())?.user?.id).toBe(userId);
+    const refreshed = await database.session.findUniqueOrThrow({ where: { id: session.id } });
+    expect(refreshed.expiresAt).toEqual(expiresAt);
+
+    await database.session.update({ where: { id: session.id }, data: { expiresAt: new Date(now - 1) } });
+    expect(await (await readSession()).json()).toBeNull();
   });
 
   it("reserves and enforces the username assigned by an invitation", async () => {

@@ -5,7 +5,7 @@ import { jwt, username } from "better-auth/plugins";
 import { getServerEnv, getTrustedOrigins } from "@/lib/env";
 import { sendSecurityNotice, sendTransactionalMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
-import { riskAuthPlugin } from "@/lib/risk-auth-plugin";
+import { riskAuthPlugin, TRUST_MS } from "@/lib/risk-auth-plugin";
 import { profileEmailPlugin } from "@/lib/profile-email-plugin";
 
 const env = getServerEnv();
@@ -30,6 +30,19 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   trustedOrigins: getTrustedOrigins(),
+  databaseHooks: {
+    session: {
+      update: {
+        before: async (update, ctx) => {
+          const session = ctx?.context.session?.session;
+          if (!session || !update.expiresAt) return;
+          // Preserve the stored expiry of sessions created before the absolute limit.
+          const deadline = Math.max(session.createdAt.getTime() + TRUST_MS, session.expiresAt.getTime());
+          return { data: { expiresAt: new Date(Math.min(update.expiresAt.getTime(), deadline)) } };
+        },
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,

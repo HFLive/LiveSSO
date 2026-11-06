@@ -83,6 +83,28 @@ suite("Phase 2 database concurrency", () => {
     expect(results.filter(Boolean)).toHaveLength(1);
   });
 
+  it("rejects a valid login challenge after the account is disabled", async () => {
+    const bindingDigest = testDigest("disabled-binding");
+    const otpDigest = testDigest("disabled-otp");
+    const challenge = await database.loginChallenge.create({
+      data: {
+        userId,
+        bindingDigest,
+        otpDigest,
+        riskReasons: ["new_device"],
+        riskScore: 20,
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    await database.user.update({ where: { id: userId }, data: { accountStatus: "DISABLED" } });
+    try {
+      expect(await consumeLoginChallenge(database, { id: challenge.id, bindingDigest, otpDigest })).toBe(false);
+    } finally {
+      await database.user.update({ where: { id: userId }, data: { accountStatus: "ACTIVE" } });
+    }
+  });
+
   it("locks a challenge at its attempt limit under concurrent failures", async () => {
     const bindingDigest = testDigest("failure-binding");
     const challenge = await database.loginChallenge.create({

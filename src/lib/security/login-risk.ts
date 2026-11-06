@@ -7,9 +7,10 @@ export function assessLoginRisk(input: {
 }) {
   const reasons: string[] = [];
   if (!input.trusted) reasons.push("new_device");
-  if (input.recentFailures >= 2) reasons.push("repeated_failure");
-  if (input.recentSuccesses >= 5) reasons.push("login_frequency");
-  if (input.trusted && input.ipChanged) reasons.push("ip_change");
+  if (input.recentFailures >= 5) reasons.push("repeated_failure");
+  if (input.trusted && input.ipChanged && input.recentSuccesses >= 5) {
+    reasons.push("ip_change", "login_frequency");
+  }
   if (input.trusted && input.userAgentChanged) reasons.push("user_agent_change");
   return reasons;
 }
