@@ -112,7 +112,9 @@ export const auth = betterAuth({
       loginPage: "/sign-in",
       consentPage: "/consent",
       scopes: [...OAUTH_SCOPES],
-      validAudiences: [env.BETTER_AUTH_URL],
+      resources: [{ identifier: env.BETTER_AUTH_URL, allowedScopes: [...OAUTH_SCOPES] }],
+      enforcePerClientResources: false,
+      resourcePrivileges: () => false,
       allowDynamicClientRegistration: false,
       allowUnauthenticatedClientRegistration: false,
       clientPrivileges: () => false,
@@ -122,10 +124,6 @@ export const auth = betterAuth({
       codeExpiresIn: 5 * 60,
       storeClientSecret: "hashed",
       storeTokens: "hashed",
-      silenceWarnings: {
-        oauthAuthServerConfig: true,
-        openidConfig: true,
-      },
       customUserInfoClaims: ({ user }) => ({
         preferred_username: preferredUsername(user),
       }),
