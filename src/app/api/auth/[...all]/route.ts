@@ -44,7 +44,56 @@ export async function GET(request: Request) {
   return response;
 }
 
-export const POST = handlers.POST;
+export async function POST(request: Request) {
+  const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  if (
+    new URL(request.url).pathname !== "/api/auth/oauth2/token" ||
+    contentType !== "application/x-www-form-urlencoded" ||
+    request.headers.has("authorization")
+  ) {
+    return handlers.POST(request);
+  }
+
+  const form = new URLSearchParams(await request.clone().text());
+  const [grant, secondGrant] = form.getAll("grant_type");
+  const [clientId, secondClientId] = form.getAll("client_id");
+  const [secret, secondSecret] = form.getAll("client_secret");
+  if (
+    (grant !== "authorization_code" && grant !== "refresh_token") ||
+    !clientId || !secret ||
+    secondGrant !== undefined || secondClientId !== undefined || secondSecret !== undefined ||
+    form.has("client_assertion") || form.has("client_assertion_type")
+  ) {
+    return handlers.POST(request);
+  }
+
+  const client = await prisma.oauthClient.findUnique({
+    where: { clientId },
+    select: { approvalStatus: true, disabled: true, public: true, tokenEndpointAuthMethod: true },
+  });
+  if (
+    !client || client.approvalStatus !== "APPROVED" || client.disabled || client.public ||
+    (client.tokenEndpointAuthMethod ?? "client_secret_basic") !== "client_secret_basic"
+  ) {
+    return handlers.POST(request);
+  }
+
+  // LiveBoard's existing login clients use POST with Basic registrations.
+  // Preserve that wire format while the provider still verifies the shared secret.
+  const encode = (value: string) => new URLSearchParams([["", value]]).toString().slice(1);
+  const credentials = Buffer.from(`${encode(clientId)}:${encode(secret)}`).toString("base64");
+  const headers = new Headers(request.headers);
+  headers.set("authorization", `Basic ${credentials}`);
+  headers.delete("content-length");
+  form.delete("client_id");
+  form.delete("client_secret");
+  return handlers.POST(new Request(request.url, {
+    method: "POST",
+    headers,
+    body: form,
+    signal: request.signal,
+  }));
+}
 export const PATCH = handlers.PATCH;
 export const PUT = handlers.PUT;
 export const DELETE = handlers.DELETE;

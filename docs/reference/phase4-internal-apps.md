@@ -1,7 +1,7 @@
 # Phase 4 内部应用、Directory API 与事件参考
 
 状态：已实现  
-最后更新：2026-10-16
+最后更新：2026-11-09
 
 ## Client 管理
 
@@ -11,7 +11,7 @@
 - 登录 client 使用 authorization code + PKCE，redirect URI 逐字精确匹配。授权请求在进入登录流程前验证 client 已审批、未停用、回调和 scope 均在白名单。
 - consent 页面从已审批且启用的 client 记录读取管理员配置的应用名称；用户看到的是 `LiveBoard Production` 这类可信名称，而不是内部 `client_id`。协议请求仍使用真实 `client_id`，但它不作为页面上的应用名称展示。
 - 面向用户的权限说明按 Google/GitHub 的授权界面原则展示应用名称和具体数据用途；登录相关 scope 合并为“使用你的 HFLive 账号登录”，`offline_access` 表述为“保持登录状态”，页面不展示协议 scope 标识符。
-- Directory client 使用 `client_credentials`。停用、scope/回调修改或 secret 轮换会撤销该 client 的既有 access/refresh token；配置修改还撤销旧 consent。
+- Directory client 使用 `client_credentials` 和 `client_secret_basic`。停用、scope/回调修改或 secret 轮换会撤销该 client 的既有 access/refresh token；配置修改还撤销旧 consent。
 - dynamic client registration 和普通登录用户的 OAuth client 管理端点继续关闭。数据库约束要求非 `APPROVED` client 必须处于 disabled 状态。
 
 ## Directory API
@@ -26,6 +26,14 @@
 接口拒绝 authorization-code 用户 token，即使对应 client 同时拥有 Directory scope；调用必须来自 `client_credentials`。opaque token 通过数据库摘要、到期、client 状态和 scope 联合校验，JWT 路径验证 EdDSA 签名、issuer、audience、期限、client 与 scope。成功、认证失败和未找到响应均显式使用 `private, no-store`。
 
 管理员可对单一成员使用 `PATCH /api/admin/users/{userId}` 提交 `{ "identityLabel": "教师", "realName": "张老师" }`；两字段必须同时出现，可分别传 `null` 清空。长度上限分别为 40、80 字符，拒绝控制字符与混合操作。写入、审计和 `user.profile.changed` outbox 位于同一事务；事件只携带 subject，不直接携带真名，接入方通过 Directory 重新读取。
+
+## Better Auth 1.7 升级
+
+- 先通过 `pnpm db:deploy` 应用增量迁移，再启动新版服务。迁移添加 Provider 的资源、令牌与签名字段，保留现有账号、会话、授权、密钥与令牌数据。
+- 已审批的 confidential 登录 client 可继续用 LiveBoard 现有的 `client_secret_post` 交换授权码或刷新令牌。兼容仅处理单一表单凭据，Provider 继续验证 secret、PKCE 和已登记的回调地址。
+- PostgreSQL 从已批准的客户端 scope 与 grant 派生 `clientCredentialsScopes`，只包含 Directory 权限。旧版和新版服务重叠运行时，数据库同步维护该字段。
+- Directory 验证兼容 1.6 机器 JWT 和 1.7 带客户端 subject 的机器 JWT，拒绝携带用户会话的 JWT 和已撤销的 opaque token。使用 `resource` 的登录客户端须在授权请求中声明目标资源，令牌请求可以缩小已授权的资源范围。
+- 如需回滚，先恢复上一版应用，保留增量 schema。用隔离数据库验证过旧版可在迁移后完成授权码与 PKCE 流程。
 
 ## 可靠事件
 

@@ -116,9 +116,8 @@ const tokenResponse = await fetch(`${baseUrl}/api/auth/oauth2/token`, {
   }),
 });
 
-const tokenBody = await tokenResponse.text();
-assert(tokenResponse.ok, `Token exchange failed with HTTP ${tokenResponse.status}: ${tokenBody}`);
-const tokenData = JSON.parse(tokenBody) as {
+assert(tokenResponse.ok, `Token exchange failed with HTTP ${tokenResponse.status}.`);
+const tokenData = (await tokenResponse.json()) as {
   access_token?: string;
   id_token?: string;
   refresh_token?: string;
@@ -143,4 +142,18 @@ assert(payload.sub, "ID token is missing sub.");
 assert(payload.nonce === nonce, "OIDC nonce did not round-trip.");
 assert(payload.preferred_username === username, "ID token is missing the stable preferred_username claim.");
 
-console.info("OIDC authorization code + PKCE smoke test passed.");
+const refreshResponse = await fetch(`${baseUrl}/api/auth/oauth2/token`, {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams({
+    grant_type: "refresh_token",
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: tokenData.refresh_token,
+  }),
+});
+assert(refreshResponse.ok, `Refresh exchange failed with HTTP ${refreshResponse.status}.`);
+const refreshed = await refreshResponse.json() as { access_token?: string };
+assert(refreshed.access_token, "Refresh response did not contain an access token.");
+
+console.info("OIDC authorization code + PKCE and refresh smoke test passed.");

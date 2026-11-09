@@ -72,6 +72,7 @@ PostgreSQL 是唯一受支持的关系数据库。认证系统需要跨 Serverle
 - `User`、`Session`、`Account`、`Verification`
 - `Jwks`
 - `OauthClient`、`OauthRefreshToken`、`OauthAccessToken`、`OauthConsent`
+- `OauthResource`、`OauthClientResource`、`OauthClientAssertion`（Better Auth 1.7 Provider schema）
 - `RateLimit`
 
 HFLive 领域表已包含邀请、受信设备、风险 challenge、审计、资料资产、outbox、账号状态、管理员权限、client 审批状态和 webhook 订阅。状态机、保留期与并发契约见 [Phase 2 安全与领域数据参考](./reference/security-domain-data.md)，认证流程见 [Phase 3 认证流程参考](./reference/phase3-auth-flows.md)，内部应用协议见 [Phase 4 参考](./reference/phase4-internal-apps.md)。
@@ -97,7 +98,7 @@ HFLive 领域表已包含邀请、受信设备、风险 challenge、审计、资
 
 - 公开注册和 dynamic client registration 始终关闭。
 - redirect URI 精确匹配；client 和 scope 由管理员审批。
-- OAuth access token audience 固定为单一 issuer `BETTER_AUTH_URL`；资源服务必须精确验证自身 audience，不把 RFC 8707 `resource` 当作额外授权边界。
+- Directory JWT 的 audience 必须包含 `BETTER_AUTH_URL`，同时核对客户端身份、审批状态和 scope。OAuth Provider 的资源配置由服务端维护，浏览器会话无法调用资源管理 API。
 - 登录响应避免用户枚举，登录路径使用数据库限流。
 - 密码、OTP、token、code、secret 和私钥不得进入日志或文档。
 - 新设备/风险登录使用邮箱 OTP；受信设备最长 30 天；TOTP 默认关闭。

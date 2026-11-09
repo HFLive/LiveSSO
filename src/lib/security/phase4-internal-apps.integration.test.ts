@@ -66,7 +66,9 @@ suite("Phase 4 internal applications", () => {
     const pendingId = `pending_${runId}`;
     createdClientIds.push(pendingId);
     await database.oauthClient.create({ data: { clientId: pendingId, clientSecret: "not-a-real-secret", disabled: true, approvalStatus: "PENDING", scopes: ["directory:user:status"], contacts: [], redirectUris: [], postLogoutRedirectUris: [], grantTypes: ["client_credentials"], responseTypes: [], createdAt: new Date(), updatedAt: new Date() } });
-    expect((await token(pendingId, "not-a-real-secret", "directory:user:status")).status).toBe(400);
+    const denied = await token(pendingId, "not-a-real-secret", "directory:user:status");
+    expect(denied.status).toBe(401);
+    expect(await denied.json()).toMatchObject({ error: "invalid_client" });
 
     const login = await createApprovedClient(database, { actorUserId: adminId, name: "Login app", redirectUris: ["https://app.example/callback"], scopes: ["openid", "profile"] });
     createdClientIds.push(login.clientId);
@@ -82,7 +84,7 @@ suite("Phase 4 internal applications", () => {
     createdClientIds.push(client.clientId);
     const wrongAudience = await token(client.clientId, client.clientSecret, "directory:user:status", "https://other-resource.example");
     expect(wrongAudience.status).toBe(400);
-    expect(await wrongAudience.json()).toMatchObject({ error: "invalid_request" });
+    expect(await wrongAudience.json()).toMatchObject({ error: "invalid_target" });
 
     const response = await token(client.clientId, client.clientSecret, "directory:user:status");
     expect(response.status).toBe(200);
@@ -92,6 +94,14 @@ suite("Phase 4 internal applications", () => {
     const directory = await GET(new Request(`http://localhost:3000/api/directory/users/${userId}/status`, { headers: { authorization: `Bearer ${body.access_token}` } }), { params: Promise.resolve({ userId }) });
     expect(directory.status).toBe(200);
     expect(await directory.json()).toMatchObject({ subject: userId, status: "ACTIVE" });
+
+    const { getServerEnv } = await import("../env");
+    const jwt = await token(client.clientId, client.clientSecret, "directory:user:status", getServerEnv().BETTER_AUTH_URL);
+    expect(jwt.status).toBe(200);
+    const { access_token } = await jwt.json() as { access_token: string };
+    expect(access_token.split(".")).toHaveLength(3);
+    const jwtDirectory = await GET(new Request(`http://localhost:3000/api/directory/users/${userId}/status`, { headers: { authorization: `Bearer ${access_token}` } }), { params: Promise.resolve({ userId }) });
+    expect(jwtDirectory.status).toBe(200);
   });
 
   it("returns administrator identity details only to a Directory profile reader", async () => {

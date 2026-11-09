@@ -79,32 +79,32 @@ enum ClientApprovalStatus {
 }
 
 model User {
-  id                  String              @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  id                  String               @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
   name                String
   email               String
-  emailVerified       Boolean             @default(false)
+  emailVerified       Boolean              @default(false)
   image               String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   username            String?
   displayUsername     String?
-  identityLabel       String?             @db.VarChar(40)
-  realName            String?             @db.VarChar(80)
-  platformRole        PlatformRole        @default(USER)
-  accountStatus       AccountStatus       @default(ACTIVE)
+  identityLabel       String?              @db.VarChar(40)
+  realName            String?              @db.VarChar(80)
+  platformRole        PlatformRole         @default(USER)
+  accountStatus       AccountStatus        @default(ACTIVE)
   sessions            Session[]
   accounts            Account[]
   oauthclients        OauthClient[]
   oauthrefreshtokens  OauthRefreshToken[]
   oauthaccesstokens   OauthAccessToken[]
   oauthconsents       OauthConsent[]
-  invitationsCreated  Invitation[]        @relation("InvitationCreator")
-  invitationsAccepted Invitation[]        @relation("InvitationAcceptor")
+  invitationsCreated  Invitation[]         @relation("InvitationCreator")
+  invitationsAccepted Invitation[]         @relation("InvitationAcceptor")
   trustedDevices      TrustedDevice[]
   loginChallenges     LoginChallenge[]
   emailChangeRequests EmailChangeRequest[]
   profileAssets       ProfileAsset[]
-  clientsApproved     OauthClient[]       @relation("OauthClientApprover")
+  clientsApproved     OauthClient[]        @relation("OauthClientApprover")
 
   @@unique([email])
   @@unique([username])
@@ -333,56 +333,110 @@ model Jwks {
   privateKey String
   createdAt  DateTime
   expiresAt  DateTime?
+  alg        String?
+  crv        String?
 
   @@map("jwks")
 }
 
 model OauthClient {
-  id                      String               @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
-  clientId                String
-  clientSecret            String?
-  disabled                Boolean?             @default(false)
-  skipConsent             Boolean?
-  enableEndSession        Boolean?
-  subjectType             String?
-  scopes                  String[]
-  userId                  String?              @db.Uuid
-  user                    User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt               DateTime?
-  updatedAt               DateTime?
-  name                    String?
-  uri                     String?
-  icon                    String?
-  contacts                String[]
-  tos                     String?
-  policy                  String?
-  softwareId              String?
-  softwareVersion         String?
-  softwareStatement       String?
-  redirectUris            String[]
-  postLogoutRedirectUris  String[]
-  tokenEndpointAuthMethod String?
-  grantTypes              String[]
-  responseTypes           String[]
-  public                  Boolean?
-  type                    String?
-  requirePKCE             Boolean?
-  referenceId             String?
-  metadata                Json?
-  approvalStatus          ClientApprovalStatus @default(PENDING)
-  approvedById            String?              @db.Uuid
-  approvedBy              User?                @relation("OauthClientApprover", fields: [approvedById], references: [id], onDelete: SetNull)
-  approvedAt              DateTime?
-  webhooks                ClientWebhook[]
-  oauthrefreshtokens      OauthRefreshToken[]
-  oauthaccesstokens       OauthAccessToken[]
-  oauthconsents           OauthConsent[]
+  id                               String                @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  clientId                         String
+  clientSecret                     String?
+  clientDiscoveryId                String?
+  disabled                         Boolean?              @default(false)
+  skipConsent                      Boolean?
+  enableEndSession                 Boolean?
+  subjectType                      String?
+  scopes                           String[]
+  clientCredentialsScopes          String[]              @default([])
+  userId                           String?               @db.Uuid
+  user                             User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                        DateTime?
+  updatedAt                        DateTime?
+  name                             String?
+  uri                              String?
+  icon                             String?
+  contacts                         String[]
+  tos                              String?
+  policy                           String?
+  softwareId                       String?
+  softwareVersion                  String?
+  softwareStatement                String?
+  redirectUris                     String[]
+  postLogoutRedirectUris           String[]
+  backchannelLogoutUri             String?
+  backchannelLogoutSessionRequired Boolean?
+  tokenEndpointAuthMethod          String?
+  applicationType                  String?
+  jwks                             String?
+  jwksUri                          String?
+  dpopBoundAccessTokens            Boolean?              @default(false)
+  grantTypes                       String[]
+  responseTypes                    String[]
+  public                           Boolean?
+  type                             String?
+  requirePKCE                      Boolean?
+  referenceId                      String?
+  metadata                         Json?
+  approvalStatus                   ClientApprovalStatus  @default(PENDING)
+  approvedById                     String?               @db.Uuid
+  approvedBy                       User?                 @relation("OauthClientApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt                       DateTime?
+  webhooks                         ClientWebhook[]
+  oauthrefreshtokens               OauthRefreshToken[]
+  oauthaccesstokens                OauthAccessToken[]
+  oauthconsents                    OauthConsent[]
+  resources                        OauthClientResource[]
 
   @@unique([clientId])
   @@index([userId])
   @@index([approvalStatus, disabled])
   @@index([approvedById])
   @@map("oauthClient")
+}
+
+model OauthResource {
+  id                            String                @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  identifier                    String                @unique
+  name                          String
+  accessTokenTtl                Int?
+  refreshTokenTtl               Int?
+  signingAlgorithm              String?
+  signingKeyId                  String?
+  allowedScopes                 String[]
+  customClaims                  Json?
+  dpopBoundAccessTokensRequired Boolean?              @default(false)
+  disabled                      Boolean?              @default(false)
+  createdAt                     DateTime?
+  updatedAt                     DateTime?
+  policyVersion                 Int?                  @default(1)
+  metadata                      Json?
+  clients                       OauthClientResource[]
+
+  @@map("oauthResource")
+}
+
+model OauthClientResource {
+  id         String        @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  clientId   String
+  client     OauthClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  resourceId String
+  resource   OauthResource @relation(fields: [resourceId], references: [identifier], onDelete: Cascade)
+  metadata   Json?
+  createdAt  DateTime?
+
+  @@unique([clientId, resourceId])
+  @@index([clientId])
+  @@index([resourceId])
+  @@map("oauthClientResource")
+}
+
+model OauthClientAssertion {
+  id        String   @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  expiresAt DateTime
+
+  @@map("oauthClientAssertion")
 }
 
 model ClientWebhook {
@@ -402,63 +456,79 @@ model ClientWebhook {
 }
 
 model OauthRefreshToken {
-  id                String             @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
-  token             String
-  clientId          String
-  oauthclient       OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  sessionId         String?            @db.Uuid
-  session           Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  userId            String             @db.Uuid
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referenceId       String?
-  expiresAt         DateTime?
-  createdAt         DateTime?
-  revoked           DateTime?
-  authTime          DateTime?
-  scopes            String[]
-  oauthaccesstokens OauthAccessToken[]
+  id                      String             @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  token                   String
+  clientId                String
+  oauthclient             OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?            @db.Uuid
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String             @db.Uuid
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  confirmation            Json?
+  expiresAt               DateTime?
+  createdAt               DateTime?
+  revoked                 DateTime?
+  rotatedAt               DateTime?
+  rotationReplayResponse  String?
+  rotationReplayExpiresAt DateTime?
+  authTime                DateTime?
+  scopes                  String[]
+  oauthaccesstokens       OauthAccessToken[]
 
   @@unique([token])
   @@index([clientId])
   @@index([sessionId])
   @@index([userId])
+  @@index([authorizationCodeId])
   @@map("oauthRefreshToken")
 }
 
 model OauthAccessToken {
-  id                String             @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
-  token             String?
-  clientId          String
-  oauthclient       OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  sessionId         String?            @db.Uuid
-  session           Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  userId            String?            @db.Uuid
-  user              User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referenceId       String?
-  refreshId         String?            @db.Uuid
-  oauthrefreshtoken OauthRefreshToken? @relation(fields: [refreshId], references: [id], onDelete: Cascade)
-  expiresAt         DateTime?
-  createdAt         DateTime?
-  scopes            String[]
+  id                      String             @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  token                   String?
+  clientId                String
+  oauthclient             OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?            @db.Uuid
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String?            @db.Uuid
+  user                    User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  revoked                 DateTime?
+  confirmation            Json?
+  refreshId               String?            @db.Uuid
+  oauthrefreshtoken       OauthRefreshToken? @relation(fields: [refreshId], references: [id], onDelete: Cascade)
+  expiresAt               DateTime?
+  createdAt               DateTime?
+  scopes                  String[]
 
   @@unique([token])
   @@index([clientId])
   @@index([sessionId])
   @@index([userId])
   @@index([refreshId])
+  @@index([authorizationCodeId])
   @@map("oauthAccessToken")
 }
 
 model OauthConsent {
-  id          String      @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
-  clientId    String
-  oauthclient OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  userId      String?     @db.Uuid
-  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referenceId String?
-  scopes      String[]
-  createdAt   DateTime?
-  updatedAt   DateTime?
+  id                      String      @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  clientId                String
+  oauthclient             OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  userId                  String?     @db.Uuid
+  user                    User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  scopes                  String[]
+  createdAt               DateTime?
+  updatedAt               DateTime?
 
   @@index([clientId])
   @@index([userId])
