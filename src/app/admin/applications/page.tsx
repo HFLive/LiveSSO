@@ -16,6 +16,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
   const clients = await prisma.oauthClient.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: pagination.skip, take: pagination.take, select: { clientId: true, name: true, disabled: true } });
   return <AdminPageShell active="applications" title="应用" description="管理已接入的应用及其登录设置。" action={<Link className="primary-button" href="/admin/applications/new">添加应用</Link>}>
     <AdminSearch path="/admin/applications" query={q} placeholder="搜索应用名称或标识" />
+    <div className="list-columns application-columns"><span>应用 · 共 {pagination.total} 个</span><span>状态</span><span>操作</span></div>
     <div className="application-list">{clients.length ? clients.map((client) => <Link className="application-summary" key={client.clientId} href={adminHref(`/admin/applications/${encodeURIComponent(client.clientId)}`, { q, page: pagination.page })}>
       <span className="application-monogram" aria-hidden="true">{(client.name ?? "A").slice(0, 1).toUpperCase()}</span>
       <span className="application-identity"><strong>{client.name ?? "未命名应用"}</strong><code>{client.clientId}</code></span>

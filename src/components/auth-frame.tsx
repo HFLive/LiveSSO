@@ -13,8 +13,8 @@ export function AuthFrame({ children, featured = false }: { children: ReactNode;
       <main className="auth-main" id="main-content">
         {featured ? <aside className="auth-story" aria-label="HFLive 统一账号">
           <p className="eyebrow">YOUR HFLIVE ACCOUNT</p>
-          <h2>你的 HFLive。<br /><span>从这里继续。</span></h2>
-          <p className="auth-story-copy">一个账号，访问你的 HFLive 应用。</p>
+          <h2>一个账号，<br /><span>连接你的 HFLive。</span></h2>
+          <p className="auth-story-copy">在熟悉的应用之间，使用同一个身份。</p>
           <IdentityArt />
         </aside> : null}
         <section className="auth-card">{children}</section>

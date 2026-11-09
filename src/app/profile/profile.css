@@ -1,34 +1,36 @@
 .profile-shell { width: min(1040px, calc(100% - 96px)); margin: 0 auto; padding: 40px 0 80px; }
-.profile-page-header { display: flex; align-items: center; min-height: 52px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.profile-page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
 .profile-page-title { font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
-.profile-hero { display: grid; grid-template-columns: 116px minmax(0, 1fr); align-items: center; gap: 28px; padding: 48px 0; border-bottom: 1px solid var(--line); }
+.profile-hero { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 24px; padding: 28px 0; }
 .profile-avatar-action { display: grid; justify-items: center; gap: 10px; }
 .avatar-frame { display: grid; flex: none; width: 96px; height: 96px; overflow: hidden; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--surface-strong); color: var(--accent); font-size: 32px; font-weight: 450; }
 .avatar-frame img { width: 100%; height: 100%; object-fit: cover; }
-.profile-hero-copy .eyebrow { margin-bottom: 12px; font-size: 10px; }
+.profile-hero-copy .eyebrow { margin-bottom: 8px; font-size: 12px; }
 .profile-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 14px; font-size: clamp(26px, 3vw, 36px); line-height: 1.3; }
 .profile-title-name { min-width: 0; overflow-wrap: anywhere; }
 .profile-identity-meta { min-width: 0; color: var(--muted); font-size: 13px; font-weight: 400; letter-spacing: normal; line-height: 1.6; overflow-wrap: anywhere; }
 .profile-handle { margin: 8px 0 0; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 12px; overflow-wrap: anywhere; }
 .profile-hero-note { margin: 18px 0 0; color: var(--muted); font-size: 13px; }
 .profile-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
-.profile-details { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; gap: 40px; padding: 36px 0; border-bottom: 1px solid var(--line); }
+.profile-details { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; gap: 32px; padding: 24px 0; border-bottom: 1px solid var(--line); }
 .section-heading { padding-top: 12px; }
 .section-heading .eyebrow { margin-bottom: 12px; font-size: 10px; }
 .section-heading h2 { font-size: 17px; font-weight: 500; }
-.section-description { max-width: 190px; margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.section-description { max-width: 190px; margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
 .profile-data-list { min-width: 0; margin: 0; }
 .profile-data-list > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 16px; min-height: 70px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .profile-data-list > div:last-child { border-bottom: 0; }
-.profile-data-list dt { color: var(--muted); font-size: 12px; }
-.profile-data-list dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.profile-data-list dt { color: var(--muted); font-size: 13px; }
+.profile-data-list dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; margin: 0; font-size: 14px; overflow-wrap: anywhere; }
 .profile-data-list dd > span { min-width: 0; }
 .profile-data-list dd > .profile-inline-action { margin-left: auto; }
-.profile-inline-action { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 44px; min-height: 44px; padding: 8px 10px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--accent); font-size: 12px; }
+.profile-inline-action { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 44px; min-height: 44px; padding: 8px 10px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--accent); font-size: 14px; }
 .profile-inline-action:hover:not(:disabled) { border-color: var(--line); background: var(--surface); }
 .profile-inline-action:disabled { color: var(--muted); }
 .profile-email-value { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; overflow-wrap: anywhere; }
-.profile-email-value small { padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 10px; }
+.profile-email-value small { padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 12px; }
+.profile-return-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 12px; color: var(--accent); font-size: 14px; text-underline-offset: 4px; }
+.profile-section-nav { position: sticky; top: 0; z-index: 10; margin-bottom: 0; background: var(--canvas); }
 .profile-email-unavailable { color: var(--muted); font-size: 12px; }
 .profile-avatar-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
@@ -67,15 +69,15 @@
 }
 @media (max-width: 760px) {
   .profile-shell { width: calc(100% - 40px); padding-top: 24px; }
-  .profile-page-header { padding-bottom: 24px; }
+  .profile-page-header { padding-bottom: 16px; }
   .profile-page-title { font-size: 20px; }
-  .profile-hero { grid-template-columns: 76px minmax(0, 1fr); align-items: start; gap: 18px; padding: 32px 0; }
+  .profile-hero { grid-template-columns: 76px minmax(0, 1fr); align-items: start; gap: 18px; padding: 24px 0; }
   .profile-avatar-action .avatar-frame { width: 72px; height: 72px; font-size: 26px; }
   .profile-avatar-action { gap: 4px; }
   .profile-hero-copy .eyebrow { margin-bottom: 8px; }
   .profile-title { font-size: 26px; }
-  .profile-hero-note { margin-top: 14px; font-size: 12px; }
-  .profile-details { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 28px 0; }
+  .profile-hero-note { margin-top: 12px; font-size: 13px; }
+  .profile-details { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 20px 0; }
   .section-heading { padding-top: 0; }
   .section-description { max-width: none; margin-top: 7px; }
   .section-heading .eyebrow { margin-bottom: 8px; }

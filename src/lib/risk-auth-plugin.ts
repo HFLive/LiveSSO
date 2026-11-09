@@ -1,5 +1,5 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { createAuthEndpoint } from "better-auth/api";
+import { createAuthEndpoint, createAuthMiddleware } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import type { BetterAuthPlugin } from "better-auth";
 import { APIError } from "better-auth/api";
@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { digestSensitiveValue } from "@/lib/security/digest";
 import { consumeLoginChallenge, recordLoginChallengeFailure } from "@/lib/security/domain-store";
 import { assessLoginRisk } from "@/lib/security/login-risk";
+import { getLoginChallengeStatus, rotateLoginChallengeOtp, LoginChallengeError } from "@/lib/security/login-challenge";
 
 const TRUST_COOKIE = "hflive_trusted_device";
 const CHALLENGE_COOKIE = "hflive_login_challenge";
@@ -64,6 +65,12 @@ function cookieOptions(maxAge: number) {
   };
 }
 
+function assertRequestOrigin(request?: Request) {
+  const origin = request?.headers.get("origin");
+  const allowed = new Set([new URL(getServerEnv().BETTER_AUTH_URL).origin, ...getServerEnv().TRUSTED_ORIGINS.split(",").map((value) => value.trim())]);
+  if ((origin && !allowed.has(origin)) || (!origin && request?.headers.get("sec-fetch-site") === "cross-site")) throw APIError.from("FORBIDDEN", { code: "INVALID_ORIGIN", message: "Invalid origin" });
+}
+
 function safeCallbackURL(candidate?: string) {
   if (!candidate) return undefined;
   try {
@@ -79,6 +86,17 @@ function safeCallbackURL(candidate?: string) {
 export function riskAuthPlugin(): BetterAuthPlugin {
   return {
     id: "hflive-risk-auth",
+    hooks: { before: [{ matcher: (ctx) => ctx.path === "/sign-out" || ctx.path === "/request-password-reset", handler: createAuthMiddleware(async (ctx) => {
+      assertRequestOrigin(ctx.request);
+      if (ctx.path === "/request-password-reset") {
+        if (!isMailEnabled()) throw APIError.from(503, { code: "MAIL_DISABLED", message: "Account recovery is temporarily unavailable" });
+        return;
+      }
+      const binding = ctx.getCookie(CHALLENGE_COOKIE);
+      if (binding) await prisma.loginChallenge.updateMany({ where: { bindingDigest: digestSensitiveValue("login-challenge-binding", binding, getSecurityHashSecret()), status: "PENDING" }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+    }) }], after: [{ matcher: (ctx) => ctx.path === "/sign-out", handler: createAuthMiddleware(async (ctx) => {
+      ctx.setCookie(CHALLENGE_COOKIE, "", cookieOptions(0));
+    }) }] },
     endpoints: {
       hfliveSignIn: createAuthEndpoint(
         "/hflive/sign-in",
@@ -91,6 +109,7 @@ export function riskAuthPlugin(): BetterAuthPlugin {
           }),
         },
         async (ctx) => {
+          assertRequestOrigin(ctx.request);
           const callbackURL = safeCallbackURL(ctx.body.callbackURL);
           const identifier = ctx.body.identifier.trim().toLowerCase();
           const user = await prisma.user.findFirst({
@@ -161,12 +180,16 @@ export function riskAuthPlugin(): BetterAuthPlugin {
                 expiresAt: new Date(now.getTime() + CHALLENGE_MS),
               },
             });
-            ctx.setCookie(CHALLENGE_COOKIE, binding, cookieOptions(CHALLENGE_MS / 1_000));
-            await sendTransactionalMail({
+            try { await sendTransactionalMail({
               to: user.email,
               subject: "HFLive Auth 登录验证码",
               text: `你的登录验证码是 ${otp}，10 分钟内有效。请勿将验证码转发给任何人。`,
-            });
+            }); } catch {
+              await prisma.loginChallenge.updateMany({ where: { id: challenge.id, status: "PENDING" }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+              ctx.setCookie(CHALLENGE_COOKIE, "", cookieOptions(0));
+              throw APIError.from(502, { code: "MAIL_DELIVERY_FAILED", message: "Verification email could not be sent" });
+            }
+            ctx.setCookie(CHALLENGE_COOKIE, binding, cookieOptions(CHALLENGE_MS / 1_000));
             await audit({
               eventType: "login.challenge.created",
               outcome: "SUCCESS",
@@ -196,6 +219,46 @@ export function riskAuthPlugin(): BetterAuthPlugin {
           return ctx.json({ authenticated: true, url: callbackURL });
         },
       ),
+      hfliveChallengeStatus: createAuthEndpoint(
+        "/hflive/challenge/status", { method: "GET" }, async (ctx) => {
+          ctx.setHeader("cache-control", "private, no-store");
+          const binding = ctx.getCookie(CHALLENGE_COOKIE);
+          if (!binding) throw APIError.from("UNAUTHORIZED", { code: "INVALID_CHALLENGE", message: "Invalid challenge" });
+          try {
+            return ctx.json(await getLoginChallengeStatus(prisma, digestSensitiveValue("login-challenge-binding", binding, getSecurityHashSecret())));
+          } catch (error) {
+            if (error instanceof LoginChallengeError) throw APIError.from("UNAUTHORIZED", { code: error.code, message: "Challenge unavailable" });
+            throw error;
+          }
+        },
+      ),
+      hfliveResendChallenge: createAuthEndpoint(
+        "/hflive/challenge/resend", { method: "POST", body: z.object({}) }, async (ctx) => {
+          assertRequestOrigin(ctx.request);
+          ctx.setHeader("cache-control", "private, no-store");
+          const binding = ctx.getCookie(CHALLENGE_COOKIE);
+          if (!binding || !isMailEnabled()) throw APIError.from("UNAUTHORIZED", { code: "INVALID_CHALLENGE", message: "Invalid challenge" });
+          const bindingDigest = digestSensitiveValue("login-challenge-binding", binding, getSecurityHashSecret());
+          const otp = String(randomInt(100000, 1000000));
+          const otpDigest = digestSensitiveValue("login-otp", otp, getSecurityHashSecret());
+          let challenge;
+          try {
+            challenge = await rotateLoginChallengeOtp(prisma, { bindingDigest, otpDigest });
+          } catch (error) {
+            if (error instanceof LoginChallengeError) throw APIError.from(error.code === "RESEND_LIMITED" ? 429 : 401, { code: error.code, message: "Challenge unavailable" });
+            throw error;
+          }
+          try {
+            const minutes = Math.max(1, Math.ceil((challenge.expiresAt.getTime() - Date.now()) / 60_000));
+            await sendTransactionalMail({ to: challenge.email, subject: "HFLive Auth 登录验证码", text: `你的新登录验证码是 ${otp}，${minutes} 分钟内有效。此前验证码已失效。请勿将验证码转发给任何人。` });
+          } catch {
+            await prisma.loginChallenge.updateMany({ where: { id: challenge.id, otpDigest, status: "PENDING" }, data: { otpDigest: challenge.previousOtpDigest } });
+            throw APIError.from(502, { code: "MAIL_DELIVERY_FAILED", message: "Verification email could not be sent" });
+          }
+          await audit({ eventType: "login.challenge.resent", outcome: "SUCCESS", subjectUserId: challenge.userId, request: ctx.request });
+          return ctx.json(await getLoginChallengeStatus(prisma, bindingDigest));
+        },
+      ),
       hfliveVerifyChallenge: createAuthEndpoint(
         "/hflive/challenge/verify",
         {
@@ -203,6 +266,7 @@ export function riskAuthPlugin(): BetterAuthPlugin {
           body: z.object({ otp: z.string().regex(/^\d{6}$/), trustDevice: z.boolean().default(false) }),
         },
         async (ctx) => {
+          assertRequestOrigin(ctx.request);
           const binding = ctx.getCookie(CHALLENGE_COOKIE);
           if (!binding) throw APIError.from("UNAUTHORIZED", { code: "INVALID_CHALLENGE", message: "Invalid challenge" });
           const bindingDigest = digestSensitiveValue("login-challenge-binding", binding, getSecurityHashSecret());
@@ -214,8 +278,12 @@ export function riskAuthPlugin(): BetterAuthPlugin {
             otpDigest: digestSensitiveValue("login-otp", ctx.body.otp, getSecurityHashSecret()),
           });
           if (!consumed) {
-            await recordLoginChallengeFailure(prisma, { id: challenge.id, bindingDigest });
-            throw APIError.from("UNAUTHORIZED", { code: "INVALID_CHALLENGE", message: "Invalid challenge" });
+            const failed = await recordLoginChallengeFailure(prisma, { id: challenge.id, bindingDigest });
+            const code = challenge.user.accountStatus !== "ACTIVE" ? "INVALID_CHALLENGE"
+              : challenge.expiresAt <= new Date() ? "CHALLENGE_EXPIRED"
+              : failed?.status === "LOCKED" || challenge.status === "LOCKED" ? "CHALLENGE_LOCKED"
+              : failed ? "INVALID_OTP" : "INVALID_CHALLENGE";
+            throw APIError.from("UNAUTHORIZED", { code, message: "Challenge verification failed" });
           }
 
           const rememberedUntil = ctx.body.trustDevice ? new Date(Date.now() + TRUST_MS) : undefined;
@@ -260,6 +328,8 @@ export function riskAuthPlugin(): BetterAuthPlugin {
     rateLimit: [
       { pathMatcher: (path) => path === "/hflive/sign-in", window: 5 * 60, max: 10 },
       { pathMatcher: (path) => path === "/hflive/challenge/verify", window: 10 * 60, max: 8 },
+      { pathMatcher: (path) => path === "/hflive/challenge/resend", window: 60, max: 3 },
+      { pathMatcher: (path) => path === "/hflive/challenge/status", window: 60, max: 30 },
     ],
   };
 }

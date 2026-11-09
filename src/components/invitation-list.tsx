@@ -12,7 +12,7 @@ type Invitation = {
 const labels = { PENDING: "待接受", ACCEPTED: "已接受", REVOKED: "已撤回", EXPIRED: "已过期" };
 const formatter = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
 
-export function InvitationList({ initialInvitations }: { initialInvitations: Invitation[] }) {
+export function InvitationList({ initialInvitations, emptyMessage = "暂无邀请。" }: { initialInvitations: Invitation[]; emptyMessage?: string }) {
   const invitations = initialInvitations;
   const router = useRouter();
   const [refreshing, startTransition] = useTransition();
@@ -44,7 +44,7 @@ export function InvitationList({ initialInvitations }: { initialInvitations: Inv
     <div className="invitation-list-heading"><button type="button" className="admin-text-button" disabled={refreshing} onClick={() => { setError(undefined); refresh(); }}>{refreshing ? "刷新中…" : "刷新记录"}</button></div>
     <AdminError message={error} />
     {message ? <p className="invitation-success" role="status" tabIndex={-1} ref={messageRef}>{message}</p> : null}
-    {invitations.length === 0 ? <p className="admin-copy invitation-empty">暂无邀请。</p> : <div className="invitation-records">{invitations.map((item) => {
+    {invitations.length === 0 ? <p className="admin-copy invitation-empty">{emptyMessage}</p> : <div className="invitation-records">{invitations.map((item) => {
       const active = item.status === "PENDING";
       const status = item.status;
       return <article className="invitation-record" key={item.id}>

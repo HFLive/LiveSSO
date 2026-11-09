@@ -53,6 +53,7 @@ export function ProfileUsernameForm({ username, onUpdated, onNotice }: { usernam
     <button
       className="profile-inline-action"
       type="button"
+      aria-label="更改登录用户名"
       onClick={() => {
         setDraft(username ?? "");
         setPassword("");

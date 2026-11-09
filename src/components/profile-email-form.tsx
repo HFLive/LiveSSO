@@ -57,6 +57,7 @@ export function ProfileEmailForm({ mailEnabled, initialPending, currentEmail, on
     {mailEnabled ? <button
       className="profile-inline-action"
       type="button"
+      aria-label={request ? "继续更改邮箱" : "更改邮箱"}
       onClick={() => {
         setError("");
         setOpen(true);

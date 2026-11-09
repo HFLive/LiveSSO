@@ -51,11 +51,14 @@ export const auth = betterAuth({
     resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      await sendTransactionalMail({
+      try { await sendTransactionalMail({
         to: user.email,
         subject: "重置你的 HFLive Auth 密码",
         text: `请在 1 小时内打开以下链接重置密码：\n${url}\n\n如果不是你发起的请求，请忽略这封邮件。`,
-      });
+      }); } catch {
+        // Delivery failures must not distinguish an existing mailbox from an unknown account.
+        await prisma.auditEvent.create({ data: { eventType: "account.recovery.delivery_failed", actorType: "SYSTEM", subjectUserId: user.id, outcome: "FAILURE", severity: "WARNING", expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1_000) } }).catch(() => undefined);
+      }
     },
     onPasswordReset: async ({ user }) => {
       await prisma.emailChangeRequest.updateMany({
