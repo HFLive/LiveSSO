@@ -22,8 +22,10 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
   const records = await prisma.invitation.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: pagination.skip, take: pagination.take, select: { id: true, email: true, username: true, identityLabel: true, realName: true, status: true, createdAt: true, expiresAt: true, acceptedAt: true, revokedAt: true } });
   const invitations = records.map((item) => ({ ...item, status: item.status === "PENDING" && item.expiresAt <= now ? "EXPIRED" as const : item.status }));
   return <AdminPageShell active="invitations" title="邀请" description="查看邀请状态，撤回尚未接受的邀请。" action={<Link className="primary-button" href="/admin/invitations/new">发送邀请</Link>}>
-    <AdminSearch path="/admin/invitations" query={q} clearHref={adminHref("/admin/invitations", { state })} placeholder="搜索邀请邮箱或用户名"><select name="state" defaultValue={state} aria-label="邀请状态"><option value="active">待接受</option><option value="history">历史记录</option></select></AdminSearch>
-    <InvitationList initialInvitations={invitations} />
+    <nav className="filter-tabs" aria-label="邀请状态">{[["active", "待接受"], ["history", "历史记录"]].map(([value, label]) => <Link key={value} href={adminHref("/admin/invitations", { q, state: value })} aria-current={value === state ? "page" : undefined}>{label}</Link>)}</nav>
+    <AdminSearch path="/admin/invitations" query={q} clearHref={adminHref("/admin/invitations", { state })} placeholder="搜索邀请邮箱或用户名"><input type="hidden" name="state" value={state} /></AdminSearch>
+    <p className="list-count">共 {pagination.total} 条{state === "active" ? "待接受邀请" : "历史记录"}</p>
+    <InvitationList initialInvitations={invitations} emptyMessage={q ? "没有找到匹配的邀请，请调整搜索条件。" : state === "active" ? "当前没有待接受的邀请。" : "暂无历史邀请记录。"} />
     <AdminPagination pagination={pagination} path="/admin/invitations" query={{ q, state }} noun="条邀请" />
   </AdminPageShell>;
 }

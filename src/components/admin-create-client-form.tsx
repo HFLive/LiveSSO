@@ -2,12 +2,16 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AdminCredentialNotice, AdminError, type AdminCredential } from "@/components/admin-feedback";
+import { ClientScopeFields } from "@/components/client-scope-fields";
+import { useLeaveGuard } from "@/lib/use-leave-guard";
 
 export function AdminCreateClientForm() {
   const router = useRouter();
   const [credential, setCredential] = useState<AdminCredential>();
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const releaseGuard = useLeaveGuard(dirty && !credential);
   async function createClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setPending(true); setError(undefined);
     const data = new FormData(event.currentTarget);
@@ -20,15 +24,16 @@ export function AdminCreateClientForm() {
         return;
       }
       setCredential(await response.json() as AdminCredential);
+      setDirty(false); releaseGuard();
       router.refresh();
     } catch { setError("无法连接管理服务，请检查网络后重试。"); }
     finally { setPending(false); }
   }
   if (credential) return <AdminCredentialNotice credential={credential} onDone={() => router.replace(`/admin/applications/${encodeURIComponent(credential.clientId)}`)} />;
-  return <form className="admin-create-form" onSubmit={createClient}>
+  return <form className="admin-create-form" onSubmit={createClient} onChange={() => setDirty(true)}>
     <div className="field"><label htmlFor="name">应用名称</label><input id="name" name="name" required minLength={2} maxLength={120} disabled={pending} /></div>
     <div className="field"><label htmlFor="redirectUris">登录回调地址</label><textarea id="redirectUris" name="redirectUris" rows={3} placeholder="https://app.example/callback" disabled={pending} /><p className="field-help">每行一个完整地址，登录时必须精确匹配。</p></div>
-    <fieldset className="scope-field" disabled={pending}><legend>应用可访问的信息与能力</legend>{["openid", "profile", "email", "offline_access", "directory:user:read", "directory:user:status"].map((scope) => <label key={scope}><input type="checkbox" name="scopes" value={scope} /> {scope}</label>)}</fieldset>
+    <ClientScopeFields disabled={pending} />
     <div className="field"><label htmlFor="webhookUrl">事件 Webhook（可选）</label><input id="webhookUrl" name="webhookUrl" type="url" placeholder="https://app.example/hflive/events" disabled={pending} /></div>
     <AdminError message={error} />
     <button className="primary-button" disabled={pending}>{pending ? "创建中…" : "创建应用"}</button>

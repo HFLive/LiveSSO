@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { AccountMenu } from "@/components/account-menu";
 import { PageBackLink } from "@/components/page-back-link";
 import { adminHref, type adminPagination } from "@/lib/admin-pagination";
 
@@ -11,13 +14,14 @@ const sections: Array<{ key: Section; label: string }> = [
   { key: "activity", label: "操作记录" },
 ];
 
-export function AdminPageShell({ active, title, description, backHref = "/", backLabel = "返回账号中心", action, children }: {
+export async function AdminPageShell({ active, title, description, backHref = "/", backLabel = "返回账号中心", action, children }: {
   active: Section; title: string; description: string; backHref?: string; backLabel?: string; action?: ReactNode; children: ReactNode;
 }) {
+  const session = await auth.api.getSession({ headers: await headers() });
   return <main className="admin-shell" id="main-content">
     <header className="admin-header">
       <div><p className="eyebrow">组织管理</p><div className="page-heading"><PageBackLink href={backHref} label={backLabel} /><h1 className="admin-title">{title}</h1></div><p className="admin-copy">{description}</p></div>
-      {action ? <div className="admin-header-actions">{action}</div> : null}
+      <div className="admin-header-actions">{action}{session ? <AccountMenu name={session.user.name} email={session.user.email} /> : null}</div>
     </header>
     <nav className="admin-nav" aria-label="管理导航">{sections.map(({ key, label }) => <Link key={key} href={`/admin/${key}`} aria-current={active === key ? "page" : undefined}>{label}</Link>)}</nav>
     <div className="admin-page-content">{children}</div>

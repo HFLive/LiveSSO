@@ -11,14 +11,16 @@ import "./profile.css";
 
 export const metadata: Metadata = { title: "管理资料" };
 
-export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ returnTo?: string; action?: string }> }) {
-  const { returnTo: requestedReturnTo, action } = await searchParams;
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ returnTo?: string; action?: string; tab?: string }> }) {
+  const { returnTo: requestedReturnTo, action, tab } = await searchParams;
+  const section = action === "password" || tab === "security" ? "security" : "basic";
   const returnTarget = await resolveProfileReturnTarget(prisma, requestedReturnTo);
   const returnTo = returnTarget?.url;
   const session = await auth.api.getSession({ headers: await headers() });
   const profileQuery = new URLSearchParams();
   if (returnTo) profileQuery.set("returnTo", returnTo);
   if (action === "password") profileQuery.set("action", "password");
+  if (section === "security") profileQuery.set("tab", "security");
   const profilePath = profileQuery.size ? `/profile?${profileQuery}` : "/profile";
   if (!session) redirect(`/sign-in?callbackURL=${encodeURIComponent(profilePath)}`);
   const user = await prisma.user.findUnique({
@@ -41,6 +43,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   return (
     <main className="profile-shell" id="main-content">
       <ProfileAvatarForm
+        key={`${section}:${action ?? ""}`}
+        activeSection={section}
         profile={{
           name: user.name,
           username: user.username,

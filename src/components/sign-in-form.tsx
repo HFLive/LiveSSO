@@ -14,6 +14,8 @@ function getFriendlyError(code?: string) {
       return "尝试次数过多，请稍后再试。";
     case "USER_BANNED":
       return "此账号目前不可用，请联系管理员。";
+    case "MAIL_DELIVERY_FAILED":
+      return "验证邮件暂时发送失败，请稍后重新登录。";
     default:
       return "暂时无法登录，请稍后重试。";
   }
@@ -40,6 +42,7 @@ export function SignInForm() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ identifier: normalizedIdentifier, password, callbackURL }),
+        signal: AbortSignal.timeout(15_000),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {

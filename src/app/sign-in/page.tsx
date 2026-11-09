@@ -6,6 +6,8 @@ import { SignInForm } from "@/components/sign-in-form";
 import { resolveAuthenticatedDestination } from "@/lib/authenticated-destination";
 import { auth } from "@/lib/auth";
 import { getServerEnv } from "@/lib/env";
+import { prisma } from "@/lib/prisma";
+import { getLoginApplication } from "@/lib/login-application";
 
 export const metadata: Metadata = {
   title: "登录",
@@ -20,20 +22,20 @@ export default async function SignInPage({
     auth.api.getSession({ headers: await headers() }),
     searchParams,
   ]);
-  if (session) {
-    const current = new URL("/sign-in", getServerEnv().BETTER_AUTH_URL);
-    for (const [key, value] of Object.entries(query)) {
+  const current = new URL("/sign-in", getServerEnv().BETTER_AUTH_URL);
+  for (const [key, value] of Object.entries(query)) {
       if (Array.isArray(value)) value.forEach((item) => current.searchParams.append(key, item));
       else if (value !== undefined) current.searchParams.set(key, value);
-    }
+  }
+  if (session) {
     redirect(resolveAuthenticatedDestination(current.href));
   }
+  const applicationName = await getLoginApplication(prisma, current.href);
 
   return (
     <AuthFrame featured>
-        <p className="eyebrow">欢迎回来</p>
         <h1 className="auth-title">登录你的账号</h1>
-        <p className="auth-copy">登录后，继续访问你的组织应用。</p>
+        <p className="auth-copy">{applicationName ? <>登录后，继续前往 <strong className="auth-application">{applicationName}</strong>。</> : "登录后，管理资料或访问你的组织应用。"}</p>
 
         <SignInForm />
 

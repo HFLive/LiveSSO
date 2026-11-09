@@ -16,6 +16,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const users = await prisma.user.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: pagination.skip, take: pagination.take, select: { id: true, name: true, username: true, email: true, platformRole: true, accountStatus: true } });
   return <AdminPageShell active="members" title="成员" description="查找成员，查看资料和账号状态。" action={<Link className="primary-button" href="/admin/invitations/new">邀请成员</Link>}>
     <AdminSearch path="/admin/members" query={q} placeholder="搜索姓名、用户名或邮箱" />
+    <div className="list-columns member-columns"><span>成员 · 共 {pagination.total} 人</span><span>登录用户名</span><span>角色</span><span>状态</span><span /></div>
     <div className="member-list">{users.length ? users.map((user) => <Link className="member-list-row" key={user.id} href={adminHref(`/admin/members/${user.id}`, { q, page: pagination.page })}>
       <span className="member-identity"><strong>{user.name}</strong><small>{user.email}</small></span>
       <code className="member-username">{user.username ? `@${user.username}` : "未设置用户名"}</code>
