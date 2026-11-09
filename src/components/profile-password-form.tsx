@@ -64,7 +64,7 @@ export function ProfilePasswordForm({ initialOpen, onNotice }: {
   }
 
   return <>
-    <button className="profile-inline-action" type="button" onClick={() => { setError(""); setOpen(true); }}>更改</button>
+    <button className="profile-inline-action" type="button" aria-label="更改密码" onClick={() => { setError(""); setOpen(true); }}>更改</button>
     <ProfileEditDialog open={open} title="更改密码" description="修改后，其他 HFLive Auth 登录会话将退出。" busy={busy} onClose={close}>
       <form className="profile-dialog-form" onSubmit={submit}>
         <label htmlFor="profile-current-password">当前密码</label>

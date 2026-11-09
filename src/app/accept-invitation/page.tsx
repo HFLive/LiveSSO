@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthFrame } from "@/components/auth-frame";
 import { InvitationAcceptForm } from "@/components/invitation-accept-form";
 import { prisma } from "@/lib/prisma";
 import { parseInvitationToken } from "@/lib/security/invitation-token";
@@ -12,9 +13,9 @@ export default async function AcceptInvitationPage({ searchParams }: { searchPar
     where: { id: parsed.id, tokenDigest: parsed.tokenDigest, status: "PENDING", expiresAt: { gt: new Date() } },
     select: { username: true, identityLabel: true, realName: true },
   }) : null;
-  return <main className="auth-main"><section className="panel auth-card">
+  return <AuthFrame>
     <p className="eyebrow">账号邀请</p><h1 className="auth-title">创建 HFLive Auth 账号</h1>
     <p className="auth-copy">设置显示名、登录用户名和密码，完成账号创建。</p>
     {invitation ? <InvitationAcceptForm token={token} assignedUsername={invitation.username ?? undefined} identityLabel={invitation.identityLabel} realName={invitation.realName} /> : <><p className="form-error" role="alert">此邀请链接无效、已过期或已经使用。请联系管理员重新邀请。</p><a className="form-link" href="/sign-in">返回登录</a></>}
-  </section></main>;
+  </AuthFrame>;
 }

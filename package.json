@@ -17,7 +17,7 @@
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
     "test:db": "RUN_DATABASE_TESTS=true vitest run src/lib/security/domain-store.integration.test.ts",
-    "test:phase3": "RUN_PHASE3_TESTS=true MAIL_ENABLED=true MAIL_TRANSPORT=smtp MAIL_SMTP_HOST=localhost MAIL_SMTP_PORT=51025 SECURITY_HASH_SECRET=phase3-local-test-secret-000000000 vitest run src/lib/security/phase3-auth.integration.test.ts",
+    "test:phase3": "RUN_PHASE3_TESTS=true MAIL_ENABLED=true MAIL_TRANSPORT=smtp MAIL_SMTP_HOST=localhost MAIL_SMTP_PORT=51025 SECURITY_HASH_SECRET=phase3-local-test-secret-000000000 vitest run src/lib/security/phase3-auth.integration.test.ts src/lib/security/login-challenge.integration.test.ts",
     "test:phase4": "RUN_PHASE4_TESTS=true SECURITY_HASH_SECRET=phase4-local-test-secret-000000000 OUTBOX_WORKER_SECRET=phase4-local-worker-secret-000000000 vitest run src/lib/security/phase4-internal-apps.integration.test.ts",
     "test:phase5": "RUN_PHASE5_TESTS=true BETTER_AUTH_URL=http://localhost:3000 BETTER_AUTH_SECRET=phase5-local-auth-secret-0000000000 SECURITY_HASH_SECRET=phase5-local-hash-secret-0000000000 DATABASE_URL=postgresql://hflive:hflive@localhost:55432/hflive_auth DIRECT_DATABASE_URL=postgresql://hflive:hflive@localhost:55432/hflive_auth OBJECT_STORAGE_ENABLED=true S3_ENDPOINT=http://localhost:59000 S3_REGION=auto S3_BUCKET=hflive-auth S3_ACCESS_KEY_ID=hflive S3_SECRET_ACCESS_KEY=hflive-development S3_FORCE_PATH_STYLE=true vitest run src/lib/security/phase5-profile.integration.test.ts",
     "validate": "pnpm lint && pnpm typecheck && pnpm test",

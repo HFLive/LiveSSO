@@ -7,6 +7,8 @@ import { ProfileEmailForm } from "@/components/profile-email-form";
 import { ProfilePasswordForm } from "@/components/profile-password-form";
 import { ProfileEditDialog } from "@/components/profile-edit-dialog";
 import { PageBackLink } from "@/components/page-back-link";
+import Link from "next/link";
+import { AccountMenu } from "@/components/account-menu";
 
 const OUTPUT_SIZE = 512;
 
@@ -30,6 +32,7 @@ export function ProfileAvatarForm({
   mailEnabled,
   pendingEmail,
   initialPasswordOpen,
+  activeSection,
 }: {
   profile: ProfileDetails;
   initialPicture: string | null;
@@ -39,6 +42,7 @@ export function ProfileAvatarForm({
   mailEnabled: boolean;
   pendingEmail: { newEmail: string; expiresAt: string } | null;
   initialPasswordOpen: boolean;
+  activeSection: "basic" | "security";
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -59,6 +63,11 @@ export function ProfileAvatarForm({
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+  function sectionHref(section: "basic" | "security") {
+    const query = new URLSearchParams({ tab: section });
+    if (returnTo) query.set("returnTo", returnTo);
+    return `/profile?${query}`;
+  }
 
   function draw() {
     const image = imageRef.current;
@@ -177,35 +186,47 @@ export function ProfileAvatarForm({
         <PageBackLink href={returnTo ?? "/"} label={returnTo ? `返回${returnAppName ?? "已连接的应用"}` : "返回首页"} />
         <h1 className="profile-page-title">个人资料</h1>
       </div>
+      <AccountMenu name={name} email={profile.email} />
     </header>
 
-    <div className="panel profile-hero">
+    <div className="profile-hero">
       <div className="profile-avatar-action">
         <div className="avatar-frame">{picture ? <NextImage src={picture} alt="当前头像" width={160} height={160} unoptimized /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}</div>
         {storageEnabled ? <button className="profile-inline-action" type="button" onClick={() => { setError(undefined); setAvatarOpen(true); }}>更改头像</button> : null}
       </div>
       <div className="profile-hero-copy">
+        <p className="eyebrow">你的 HFLive 账号</p>
         <h2 className="profile-title"><span className="profile-title-name">{name}</span>{profile.platformRole === "ADMIN" && (profile.identityLabel || profile.realName) ? <small className="profile-identity-meta">({[profile.identityLabel, profile.realName].filter(Boolean).join(" ")})</small> : null}</h2>
         <p className="profile-handle">@{username ?? "未设置用户名"}</p>
+        <p className="profile-hero-note">更新后的资料会同步到已连接的应用。</p>
       </div>
     </div>
 
+    {returnTo ? <Link className="profile-return-link" href={returnTo}>返回{returnAppName ?? "已连接的应用"} <span aria-hidden="true">↗</span></Link> : null}
+    <nav className="profile-section-nav" aria-label="资料设置">{([["basic", "基本资料"], ["security", "登录与安全"]] as const).map(([section, label]) => <Link key={section} href={sectionHref(section)} aria-current={activeSection === section ? "page" : undefined}>{label}</Link>)}</nav>
     <div className="profile-grid">
-      <div className="panel profile-details" id="basic">
+      <div className="profile-details" id="basic" hidden={activeSection !== "basic"}>
         <div className="section-heading">
-          <div><p className="eyebrow">基本资料</p><h2>账号信息</h2></div>
+          <div><h2>基本资料</h2><p className="section-description">你在 HFLive 应用中展示的个人信息。</p></div>
         </div>
         <dl className="profile-data-list">
-          <div className="profile-name-row"><dt>显示名</dt><dd><span>{name}</span><button className="profile-inline-action" type="button" onClick={() => { setNameDraft(name); setNameError(undefined); setNameOpen(true); }}>更改</button></dd></div>
-          <div><dt>登录用户名</dt><dd><span>@{username ?? "未设置"}</span><ProfileUsernameForm username={username} onUpdated={setUsername} onNotice={setNotice} /></dd></div>
+          <div className="profile-name-row"><dt>显示名</dt><dd><span>{name}</span><button className="profile-inline-action" type="button" aria-label="更改显示名" onClick={() => { setNameDraft(name); setNameError(undefined); setNameOpen(true); }}>更改</button></dd></div>
           {profile.platformRole === "ADMIN" ? <div><dt>身份资料</dt><dd>{[profile.identityLabel, profile.realName].filter(Boolean).join(" · ") || "管理员尚未设置"}</dd></div> : null}
+          {profile.platformRole === "ADMIN" ? <div><dt>账号类型</dt><dd>管理员</dd></div> : null}
+          <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
+        </dl>
+      </div>
+      <div className="profile-details" id="security" hidden={activeSection !== "security"}>
+        <div className="section-heading">
+          <div><h2>登录与安全</h2><p className="section-description">管理登录方式，保持账号安全。</p></div>
+        </div>
+        <dl className="profile-data-list">
+          <div><dt>登录用户名</dt><dd><span>@{username ?? "未设置"}</span><ProfileUsernameForm username={username} onUpdated={setUsername} onNotice={setNotice} /></dd></div>
           <div><dt>邮箱</dt><dd>
             <span className="profile-email-value">{profile.email}<small>{profile.emailVerified ? "已验证" : "未验证"}</small></span>
             <ProfileEmailForm mailEnabled={mailEnabled} initialPending={pendingEmail} currentEmail={profile.email} onNotice={setNotice} />
           </dd></div>
           <div id="password"><dt>密码</dt><dd><span>使用密码登录</span><ProfilePasswordForm initialOpen={initialPasswordOpen} onNotice={setNotice} /></dd></div>
-          {profile.platformRole === "ADMIN" ? <div><dt>账号类型</dt><dd>管理员</dd></div> : null}
-          <div><dt>加入时间</dt><dd>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "long", timeZone: "Asia/Shanghai" }).format(new Date(profile.createdAt))}</dd></div>
         </dl>
       </div>
 
