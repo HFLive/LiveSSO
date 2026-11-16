@@ -39,6 +39,8 @@ MAIL_SMTP_PORT=51025
 
 以上端口适用于宿主机运行 `pnpm dev`。Compose app 容器默认连接 `mailpit:1025`；可通过同名环境变量覆盖为外部 SMTP 或 HTTP provider。
 
+使用本地测试账号触发邮件后，可在 Mailpit 的 HTML 和纯文本视图检查正文。缩窄预览区检查链接是否换行，确认邀请和重置按钮与下方备用链接指向同一地址，并核对验证码可整段复制、有效期与重发提示正确。
+
 生产 HTTP 邮件供应商使用 `MAIL_TRANSPORT=http`、`MAIL_API_URL` 和可选 `MAIL_API_TOKEN`。自部署关闭邮件会同时关闭邀请与找回密码，并让风险登录以可审计的降级方式继续；官方生产不允许该降级。
 
 静态资源默认继续由 Next.js/Vercel 提供（`STATIC_ASSET_PROVIDER=vercel`）。可选 EdgeOne 上传只在 `VERCEL=1` 且 `VERCEL_ENV=production` 的构建完成后执行；本地、Preview 和 Docker 构建不会访问 EdgeOne。完整变量、未备案区域限制、验证与回滚步骤见 [Phase 5 部署参考](./reference/phase5-profile-deployment.md#edgeone-可选静态资源分发)。

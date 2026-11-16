@@ -1,11 +1,12 @@
 import nodemailer from "nodemailer";
 import { getServerEnv } from "@/lib/env";
+import { securityNoticeEmail } from "@/lib/mail-templates";
 
 export type TransactionalMessage = {
   to: string;
   subject: string;
   text: string;
-  html?: string;
+  html: string;
 };
 
 export function isMailEnabled() {
@@ -42,9 +43,5 @@ export async function sendTransactionalMail(message: TransactionalMessage) {
 }
 
 export async function sendSecurityNotice(to: string, summary: string) {
-  await sendTransactionalMail({
-    to,
-    subject: "HFLive Auth 安全提醒",
-    text: `${summary}\n\n如果这不是你的操作，请立即联系 HFLive Auth 管理员并重置密码。`,
-  });
+  await sendTransactionalMail({ to, ...securityNoticeEmail(summary) });
 }

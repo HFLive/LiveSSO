@@ -4,11 +4,13 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { jwt, username } from "better-auth/plugins";
 import { getServerEnv, getTrustedOrigins } from "@/lib/env";
 import { sendSecurityNotice, sendTransactionalMail } from "@/lib/mail";
+import { passwordResetEmail } from "@/lib/mail-templates";
 import { prisma } from "@/lib/prisma";
 import { riskAuthPlugin, TRUST_MS } from "@/lib/risk-auth-plugin";
 import { profileEmailPlugin } from "@/lib/profile-email-plugin";
 
 const env = getServerEnv();
+const PASSWORD_RESET_HOURS = 1;
 const OAUTH_SCOPES = [
   "openid",
   "profile",
@@ -48,14 +50,12 @@ export const auth = betterAuth({
     disableSignUp: true,
     minPasswordLength: 12,
     maxPasswordLength: 128,
-    resetPasswordTokenExpiresIn: 60 * 60,
+    resetPasswordTokenExpiresIn: PASSWORD_RESET_HOURS * 60 * 60,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      try { await sendTransactionalMail({
-        to: user.email,
-        subject: "重置你的 HFLive Auth 密码",
-        text: `请在 1 小时内打开以下链接重置密码：\n${url}\n\n如果不是你发起的请求，请忽略这封邮件。`,
-      }); } catch {
+      try {
+        await sendTransactionalMail({ to: user.email, ...passwordResetEmail(url, PASSWORD_RESET_HOURS) });
+      } catch {
         // Delivery failures must not distinguish an existing mailbox from an unknown account.
         await prisma.auditEvent.create({ data: { eventType: "account.recovery.delivery_failed", actorType: "SYSTEM", subjectUserId: user.id, outcome: "FAILURE", severity: "WARNING", expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1_000) } }).catch(() => undefined);
       }

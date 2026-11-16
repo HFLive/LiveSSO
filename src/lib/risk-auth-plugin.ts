@@ -6,6 +6,7 @@ import { APIError } from "better-auth/api";
 import * as z from "zod";
 import { getSecurityHashSecret, getServerEnv } from "@/lib/env";
 import { isMailEnabled, sendSecurityNotice, sendTransactionalMail } from "@/lib/mail";
+import { loginCodeEmail } from "@/lib/mail-templates";
 import { prisma } from "@/lib/prisma";
 import { digestSensitiveValue } from "@/lib/security/digest";
 import { consumeLoginChallenge, recordLoginChallengeFailure } from "@/lib/security/domain-store";
@@ -180,11 +181,9 @@ export function riskAuthPlugin(): BetterAuthPlugin {
                 expiresAt: new Date(now.getTime() + CHALLENGE_MS),
               },
             });
-            try { await sendTransactionalMail({
-              to: user.email,
-              subject: "HFLive Auth 登录验证码",
-              text: `你的登录验证码是 ${otp}，10 分钟内有效。请勿将验证码转发给任何人。`,
-            }); } catch {
+            try {
+              await sendTransactionalMail({ to: user.email, ...loginCodeEmail(otp, CHALLENGE_MS / 60_000) });
+            } catch {
               await prisma.loginChallenge.updateMany({ where: { id: challenge.id, status: "PENDING" }, data: { status: "CANCELLED", cancelledAt: new Date() } });
               ctx.setCookie(CHALLENGE_COOKIE, "", cookieOptions(0));
               throw APIError.from(502, { code: "MAIL_DELIVERY_FAILED", message: "Verification email could not be sent" });
@@ -250,7 +249,7 @@ export function riskAuthPlugin(): BetterAuthPlugin {
           }
           try {
             const minutes = Math.max(1, Math.ceil((challenge.expiresAt.getTime() - Date.now()) / 60_000));
-            await sendTransactionalMail({ to: challenge.email, subject: "HFLive Auth 登录验证码", text: `你的新登录验证码是 ${otp}，${minutes} 分钟内有效。此前验证码已失效。请勿将验证码转发给任何人。` });
+            await sendTransactionalMail({ to: challenge.email, ...loginCodeEmail(otp, minutes, true) });
           } catch {
             await prisma.loginChallenge.updateMany({ where: { id: challenge.id, otpDigest, status: "PENDING" }, data: { otpDigest: challenge.previousOtpDigest } });
             throw APIError.from(502, { code: "MAIL_DELIVERY_FAILED", message: "Verification email could not be sent" });

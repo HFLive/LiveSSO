@@ -6,9 +6,11 @@ import type { BetterAuthPlugin } from "better-auth";
 import * as z from "zod";
 import { getSecurityHashSecret } from "@/lib/env";
 import { sendSecurityNotice, sendTransactionalMail } from "@/lib/mail";
+import { emailChangeCodeEmail } from "@/lib/mail-templates";
 import { prisma } from "@/lib/prisma";
 import { digestSensitiveValue } from "@/lib/security/digest";
 import {
+  EMAIL_CHANGE_OTP_TTL_MS,
   EmailChangeError,
   cancelEmailChange,
   confirmEmailChange,
@@ -129,8 +131,7 @@ export function profileEmailPlugin(): BetterAuthPlugin {
           try {
             await sendTransactionalMail({
               to: requested.newEmail,
-              subject: "确认更改 HFLive Auth 邮箱",
-              text: `你正在把 HFLive Auth 账号的邮箱更改为这个邮箱。\n\n验证码是 ${otp}，10 分钟内有效。请勿把验证码转发给任何人。\n\n如果这不是你发起的操作，请忽略这封邮件，账号邮箱不会改变。`,
+              ...emailChangeCodeEmail(otp, EMAIL_CHANGE_OTP_TTL_MS / 60_000),
             });
           } catch (error) {
             await prisma.emailChangeRequest.updateMany({
