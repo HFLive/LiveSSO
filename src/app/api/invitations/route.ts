@@ -3,12 +3,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { getSecurityHashSecret, getServerEnv } from "@/lib/env";
-import {
-  INVITATION_DURATIONS,
-  invitationExpiry,
-  type InvitationDuration,
-} from "@/lib/invitation-duration";
+import { invitationExpiry, type InvitationDuration } from "@/lib/invitation-duration";
 import { isMailEnabled, sendTransactionalMail } from "@/lib/mail";
+import { invitationEmail } from "@/lib/mail-templates";
 import { prisma } from "@/lib/prisma";
 import { digestSensitiveValue } from "@/lib/security/digest";
 import { expireStaleInvitations } from "@/lib/security/domain-store";
@@ -104,8 +101,7 @@ export async function POST(request: Request) {
     try {
       await sendTransactionalMail({
         to: email,
-        subject: "邀请你创建 HFLive Auth 账号",
-        text: `管理员邀请你创建 HFLive Auth 账号。${username ? `指定的用户名为 ${username}。` : "请自行选择登录用户名。"}\n\n请在 ${INVITATION_DURATIONS[duration].label}内打开以下链接设置${username ? "显示名和密码" : "用户名、显示名和密码"}：\n${url}\n\n此链接只能使用一次。`,
+        ...invitationEmail({ url: url.href, username, duration }),
       });
     } catch (error) {
       await prisma.invitation.updateMany({ where: { id: invitation.id, status: "PENDING" }, data: { status: "REVOKED", revokedAt: new Date() } });

@@ -977,3 +977,10 @@
 
 - Better Auth 与 OAuth Provider 同步升级到 1.7.18，补齐增量 PostgreSQL 迁移。数据库同步现有机器授权范围，LiveBoard 的表单凭据登录和 Directory 的 Basic 凭据继续兼容。
 - 在隔离 PostgreSQL 与 Mailpit 上验证空库部署、邮件验证码与数据库集成。用 1.6 生产构建签发合成会话和令牌，迁移后复验会话、JWKS、旧访问与刷新令牌、新授权码 + PKCE 及 Directory 请求。恢复 1.6 应用后再次验证授权码流程。
+
+## 2026-11-16 — 事务邮件版式
+
+- 将账号邀请、登录验证码（含重发）、密码重置、邮箱更改验证码和安全提醒接入共享 HTML 模板，同步生成纯文本。链接按钮和备用链接复用各流程生成的 URL；动态内容在 HTML 中转义，邮件无需请求外部图片或字体。
+- Chrome 检查 8 种样例在 1440、390、320px 及深浅色下的排版，验证窄屏长链接换行、移除样式块后的基本布局、键盘打开操作链接与验证码连续选取。Mailpit 验证实际登录邮件和模板样例的双正文，本地 HTTP 接收器验证邮件 API 字段。
+- `pnpm validate` 通过 84 项常规测试，52 项环境专项跳过；`pnpm build`、`pnpm test:phase3`（15 项）、`pnpm test:email-change`（6 项）、`pnpm test:invitations`（4 项）及 `pnpm oidc:smoke:phase4` 通过。验收使用本地测试数据，生产投递与真实邮箱客户端待验收。
+- 提交 PR 前，在 `23ea1a2` 基线上重新安装锁定依赖、部署 11 条现有迁移并复跑上述构建及测试。Better Auth 1.7 的授权码、PKCE 与刷新流程通过，本地 SMTP 接收器确认登录验证码和安全提醒都包含双正文。
